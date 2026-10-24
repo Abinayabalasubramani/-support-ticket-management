@@ -1,6 +1,8 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
-const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+import { CLIENT_ID } from '../realtime/clientId';
+
+export const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 // Drop empty values and turn arrays into "a,b,c" (the format the API expects).
 const cleanParams = (params = {}) =>
@@ -17,7 +19,13 @@ const cleanParams = (params = {}) =>
 //   History {id}  - a ticket's timeline  Analytics     - dashboard numbers
 export const apiSlice = createApi({
   reducerPath: 'api',
-  baseQuery: fetchBaseQuery({ baseUrl }),
+  baseQuery: fetchBaseQuery({
+    baseUrl,
+    prepareHeaders: (headers) => {
+      headers.set('X-Client-Id', CLIENT_ID);
+      return headers;
+    },
+  }),
   tagTypes: ['Ticket', 'History', 'Analytics'],
   endpoints: (builder) => ({
     // Reference data for dropdowns. Rarely changes, so keep it cached for an hour.
