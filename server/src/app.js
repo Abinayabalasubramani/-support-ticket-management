@@ -2,6 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const { corsOrigins } = require('./config/env');
 const prisma = require('./config/prisma');
+const routes = require('./routes');
+const notFound = require('./middleware/notFound');
+const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
@@ -17,5 +20,10 @@ app.get('/health', async (req, res) => {
     res.status(503).json({ status: 'error', database: 'unreachable' });
   }
 });
+
+app.use('/api', routes);
+
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;
