@@ -1,14 +1,23 @@
 const { Router } = require('express');
 const { subscribe } = require('../events/ticketEvents');
+const streamTickets = require('../events/streamTickets');
+const AppError = require('../utils/AppError');
 
 const router = Router();
+
+// Opening the stream needs a valid single-use ticket from POST /api/auth/stream-ticket.
+function requireTicket(req, res, next) {
+  const userId = streamTickets.consume(String(req.query.ticket || ''));
+  if (userId === null) return next(new AppError(401, 'UNAUTHENTICATED', 'Please sign in to continue.'));
+  return next();
+}
 
 // Proxies (and Render) close connections that stay silent for about a minute.
 const HEARTBEAT_MS = 25000;
 
 // GET /api/events: a Server-Sent Events stream. The connection stays open and the server
 // writes a small message whenever a ticket changes.
-router.get('/', (req, res) => {
+router.get('/', requireTicket, (req, res) => {
   res.status(200).set({
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache, no-transform',

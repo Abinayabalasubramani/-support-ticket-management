@@ -1,4 +1,4 @@
-const request = require('supertest');
+const { api } = require('./helpers/auth');
 const app = require('../src/app');
 const { prisma } = require('./helpers/db');
 const { seedListFixtures } = require('./helpers/fixtures');
@@ -12,7 +12,7 @@ beforeAll(async () => {
 
 afterAll(() => prisma.$disconnect());
 
-const list = (query = '') => request(app).get(`/api/tickets${query ? `?${query}` : ''}`);
+const list = (query = '') => api().get(`/api/tickets${query ? `?${query}` : ''}`);
 const idsOf = (res) => res.body.data.map((x) => x.id).sort((a, b) => a - b);
 const expectIds = (res, ...tickets) => {
   expect(res.status).toBe(200);

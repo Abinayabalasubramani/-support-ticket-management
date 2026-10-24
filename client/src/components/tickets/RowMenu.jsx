@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 // The "..." button at the end of a table row.
+// `onDelete` is only passed for admins; without it the Delete item is not shown.
 export default function RowMenu({ ticket, onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -35,9 +36,11 @@ export default function RowMenu({ ticket, onEdit, onDelete }) {
           <button role="menuitem" type="button" className={item} onClick={() => { setOpen(false); onEdit(ticket); }}>
             <Pencil className="h-4 w-4 text-muted" /> Edit
           </button>
-          <button role="menuitem" type="button" className={`${item} text-red-500`} onClick={() => { setOpen(false); onDelete(ticket); }}>
-            <Trash2 className="h-4 w-4" /> Delete
-          </button>
+          {onDelete && (
+            <button role="menuitem" type="button" className={`${item} text-red-500`} onClick={() => { setOpen(false); onDelete(ticket); }}>
+              <Trash2 className="h-4 w-4" /> Delete
+            </button>
+          )}
         </div>
       )}
     </div>

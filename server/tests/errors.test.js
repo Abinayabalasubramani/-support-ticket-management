@@ -1,4 +1,4 @@
-const request = require('supertest');
+const { api } = require('./helpers/auth');
 const { Prisma } = require('@prisma/client');
 const app = require('../src/app');
 const { prisma } = require('./helpers/db');
@@ -17,7 +17,7 @@ describe('unexpected failures', () => {
     const secret = "Can't reach database server at `ep-secret-host-pooler.neon.tech:5432`";
     jest.spyOn(prisma, '$transaction').mockRejectedValue(new Prisma.PrismaClientInitializationError(secret, '6.0.0', 'P1001'));
 
-    const res = await request(app).get('/api/tickets');
+    const res = await api().get('/api/tickets');
 
     expect(res.status).toBe(503);
     expect(res.body.error.code).toBe('DATABASE_UNAVAILABLE');
@@ -29,7 +29,7 @@ describe('unexpected failures', () => {
   test('a database timeout code is also a 503', async () => {
     silenceLogs();
     jest.spyOn(prisma, '$transaction').mockRejectedValue(new Prisma.PrismaClientKnownRequestError('Timed out fetching a connection', { code: 'P2024', clientVersion: '6.0.0' }));
-    const res = await request(app).get('/api/tickets');
+    const res = await api().get('/api/tickets');
     expect(res.status).toBe(503);
     expect(res.body.error.code).toBe('DATABASE_UNAVAILABLE');
   });
@@ -38,7 +38,7 @@ describe('unexpected failures', () => {
     const log = silenceLogs();
     jest.spyOn(prisma, '$transaction').mockRejectedValue(new Error('SELECT * FROM secret_table failed in C:\\app\\src\\thing.js'));
 
-    const res = await request(app).get('/api/tickets');
+    const res = await api().get('/api/tickets');
 
     expect(res.status).toBe(500);
     expect(res.body.error.code).toBe('INTERNAL_ERROR');
@@ -51,7 +51,7 @@ describe('unexpected failures', () => {
     const log = silenceLogs();
     jest.spyOn(prisma, '$transaction').mockRejectedValue(new Error('boom'));
 
-    const res = await request(app).get('/api/tickets');
+    const res = await api().get('/api/tickets');
 
     const entry = JSON.parse(log.mock.calls[0][0]);
     expect(entry).toMatchObject({ level: 'error', message: 'boom', method: 'GET', path: '/api/tickets' });
@@ -61,31 +61,31 @@ describe('unexpected failures', () => {
 
 describe('request ids', () => {
   test('every response carries an X-Request-Id header', async () => {
-    const res = await request(app).get('/api/nope');
+    const res = await api().get('/api/nope');
     expect(res.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
   });
 
   test('error bodies include the same id as the header', async () => {
-    const res = await request(app).get('/api/nope');
+    const res = await api().get('/api/nope');
     expect(res.status).toBe(404);
     expect(res.body.error.requestId).toBe(res.headers['x-request-id']);
   });
 
   test('validation errors also include it', async () => {
-    const res = await request(app).get('/api/tickets/abc');
+    const res = await api().get('/api/tickets/abc');
     expect(res.status).toBe(400);
     expect(res.body.error.requestId).toBe(res.headers['x-request-id']);
   });
 
   test('two requests get different ids', async () => {
-    const [a, b] = await Promise.all([request(app).get('/api/nope'), request(app).get('/api/nope')]);
+    const [a, b] = await Promise.all([api().get('/api/nope'), api().get('/api/nope')]);
     expect(a.headers['x-request-id']).not.toBe(b.headers['x-request-id']);
   });
 });
 
 describe('oversized and malformed bodies', () => {
   test('a body over the JSON limit -> 413', async () => {
-    const res = await request(app).post('/api/tickets').send({ title: 'x'.repeat(200 * 1024) });
+    const res = await api().post('/api/tickets').send({ title: 'x'.repeat(200 * 1024) });
     expect(res.status).toBe(413);
     expect(res.body.error.code).toBe('PAYLOAD_TOO_LARGE');
   });

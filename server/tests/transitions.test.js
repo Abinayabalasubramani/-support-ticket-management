@@ -1,4 +1,4 @@
-const request = require('supertest');
+const { api } = require('./helpers/auth');
 const app = require('../src/app');
 const { prisma, resetDb, seedRefs, makeTicket } = require('./helpers/db');
 
@@ -12,7 +12,7 @@ beforeAll(async () => {
 afterAll(() => prisma.$disconnect());
 
 const newTicket = (status) => makeTicket({ status, categoryId: refs.categories.billing.id });
-const changeStatus = (id, status) => request(app).patch(`/api/tickets/${id}/status`).send({ status });
+const changeStatus = (id, status) => api().patch(`/api/tickets/${id}/status`).send({ status });
 const historyRows = (ticketId) => prisma.statusHistory.findMany({ where: { ticketId }, orderBy: { id: 'asc' } });
 
 // Written out by hand (not imported from the app) so the test checks the rules independently.
@@ -82,7 +82,7 @@ describe('status change behaviour', () => {
   });
 
   test('a full lifecycle is recorded step by step, newest first in the API', async () => {
-    const created = await request(app).post('/api/tickets').send({
+    const created = await api().post('/api/tickets').send({
       title: 'Lifecycle',
       description: 'Goes through every status',
       categoryId: refs.categories.technical.id,
@@ -93,7 +93,7 @@ describe('status change behaviour', () => {
       expect((await changeStatus(id, status)).status).toBe(200);
     }
 
-    const history = await request(app).get(`/api/tickets/${id}/history`);
+    const history = await api().get(`/api/tickets/${id}/history`);
     expect(history.status).toBe(200);
     expect(history.body.map((h) => [h.fromStatus, h.toStatus])).toEqual([
       ['RESOLVED', 'CLOSED'],

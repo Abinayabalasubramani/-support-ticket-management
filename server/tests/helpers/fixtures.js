@@ -33,18 +33,23 @@ async function seedListFixtures() {
     ['t10', 'Duplicate invoice', 'IN_PROGRESS', 'HIGH', billing, null, 10],
   ];
 
-  const t = {};
-  for (const [key, title, status, priority, category, assignee, offset, description] of rows) {
-    t[key] = await makeTicket({
-      title,
-      status,
-      priority,
-      description: description || 'Customer needs help',
-      categoryId: category.id,
-      assigneeId: assignee ? assignee.id : null,
-      createdAt: day(offset),
-    });
-  }
+  // Created at the same time: over a slow database connection ten sequential inserts can
+  // take longer than a test hook is allowed to run. Every ticket has its own explicit date,
+  // so the order they are inserted in does not matter.
+  const created = await Promise.all(
+    rows.map(([, title, status, priority, category, assignee, offset, description]) =>
+      makeTicket({
+        title,
+        status,
+        priority,
+        description: description || 'Customer needs help',
+        categoryId: category.id,
+        assigneeId: assignee ? assignee.id : null,
+        createdAt: day(offset),
+      })
+    )
+  );
+  const t = Object.fromEntries(rows.map(([key], i) => [key, created[i]]));
   return { refs, t };
 }
 

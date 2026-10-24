@@ -12,6 +12,9 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  // Signs login tokens. Anyone who knows it can forge a login, so it must be long and random.
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters (generate a random one)'),
+  JWT_EXPIRES_IN: z.string().default('8h'),
 });
 
 const parsed = schema.safeParse(process.env);

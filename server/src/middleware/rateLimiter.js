@@ -32,4 +32,25 @@ function createLimiters({ generalPerMinute = 300, writesPerMinute = 60, skip = (
   };
 }
 
-module.exports = { createLimiters };
+// Brute-force protection for the login form: only FAILED attempts count, so a person who
+// types the right password is never locked out, but guessing is capped per IP.
+function createLoginLimiter({ limit = 10, windowMs = 15 * 60 * 1000, skip = () => false } = {}) {
+  return rateLimit({
+    windowMs,
+    limit,
+    skipSuccessfulRequests: true,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    skip,
+    handler: (req, res) =>
+      res.status(429).json({
+        error: {
+          code: 'TOO_MANY_LOGIN_ATTEMPTS',
+          message: 'Too many failed sign-in attempts. Please wait a few minutes and try again.',
+          requestId: req.id,
+        },
+      }),
+  });
+}
+
+module.exports = { createLimiters, createLoginLimiter };

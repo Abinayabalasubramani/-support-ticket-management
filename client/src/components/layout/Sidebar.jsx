@@ -1,5 +1,9 @@
+import { useSelector } from 'react-redux';
 import { NavLink } from 'react-router-dom';
-import { LayoutGrid, Ticket } from 'lucide-react';
+import { LayoutGrid, LogOut, Ticket } from 'lucide-react';
+import { selectUser } from '../../features/auth/authSlice';
+import useSignOut from '../../features/auth/useSignOut';
+import Avatar from '../common/Avatar';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid, end: true },
@@ -7,6 +11,9 @@ const links = [
 ];
 
 export default function Sidebar({ open, onClose }) {
+  const user = useSelector(selectUser);
+  const signOut = useSignOut();
+
   return (
     <>
       {/* Dim backdrop behind the drawer on small screens */}
@@ -60,6 +67,23 @@ export default function Sidebar({ open, onClose }) {
             </NavLink>
           ))}
         </nav>
+
+        {/* Who is signed in, with an obvious way out */}
+        {user && (
+          <div className="relative border-t border-line p-4">
+            <div className="flex items-center gap-3">
+              <Avatar name={user.name} size="h-10 w-10 text-sm" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-fg">{user.name}</p>
+                <p className="truncate text-xs capitalize text-muted">{user.role.toLowerCase()}</p>
+              </div>
+            </div>
+            <button type="button" onClick={signOut} className="btn-secondary mt-3 w-full">
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </button>
+          </div>
+        )}
       </aside>
     </>
   );

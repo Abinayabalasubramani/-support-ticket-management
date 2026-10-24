@@ -5,6 +5,7 @@ import { House, Menu, Plus, Search, Ticket } from 'lucide-react';
 import { setSearch } from '../../features/filters/filtersSlice';
 import { openCreateForm } from '../../features/ui/uiSlice';
 import ThemeToggle from './ThemeToggle';
+import UserMenu from './UserMenu';
 
 function pageFor(pathname) {
   if (pathname === '/') return { title: 'Dashboard', icon: House };
@@ -75,6 +76,7 @@ export default function Topbar({ onMenuClick }) {
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Create ticket</span>
         </button>
+        <UserMenu />
       </div>
     </header>
   );

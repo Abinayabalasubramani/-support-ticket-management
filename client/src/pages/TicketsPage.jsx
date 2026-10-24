@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { ArrowUpDown, Ticket } from 'lucide-react';
 import { useBulkUpdateMutation, useDeleteTicketMutation, useGetMetaQuery, useGetTicketsQuery } from '../api/apiSlice';
 import { resetFilters, selectFilters, selectHasActiveFilters, setLimit, setPage, setSort } from '../features/filters/filtersSlice';
+import { selectIsAdmin } from '../features/auth/authSlice';
 import { openEditForm } from '../features/ui/uiSlice';
 import { getErrorMessage } from '../utils/errors';
 import { STATUS_LABELS } from '../utils/labels';
@@ -36,6 +37,7 @@ export default function TicketsPage() {
   const toast = useToast();
   const filters = useSelector(selectFilters);
   const hasActiveFilters = useSelector(selectHasActiveFilters);
+  const isAdmin = useSelector(selectIsAdmin);
 
   const { data, isLoading, isFetching, isError, error, refetch } = useGetTicketsQuery(filters);
   const { data: meta } = useGetMetaQuery();
@@ -207,7 +209,7 @@ export default function TicketsPage() {
               order={filters.order}
               onSort={onSort}
               onEdit={(ticket) => dispatch(openEditForm(ticket))}
-              onDelete={setPendingDelete}
+              onDelete={isAdmin ? setPendingDelete : undefined}
               dimmed={isFetching}
             />
             <Pagination {...data.meta} disabled={isFetching} onPageChange={(p) => dispatch(setPage(p))} onLimitChange={(n) => dispatch(setLimit(n))} />

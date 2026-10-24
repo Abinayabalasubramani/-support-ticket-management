@@ -15,7 +15,7 @@ const logError = (req, err) =>
       level: 'error',
       requestId: req.id,
       method: req.method,
-      path: req.originalUrl,
+      path: req.originalUrl.split('?')[0], // never log the query string (it can hold a stream ticket)
       name: err.name,
       code: err.code,
       message: err.message,

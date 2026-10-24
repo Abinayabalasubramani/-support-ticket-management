@@ -14,16 +14,27 @@ const dateWhere = ({ from, to }) => {
   return { createdAt };
 };
 
+// One grouped query (at most 16 rows: status x priority) instead of five separate counts,
+// so the dashboard's headline numbers cost a single database round trip.
 async function getSummary(range) {
-  const base = dateWhere(range);
-  const [total, open, resolved, critical, criticalUnresolved] = await prisma.$transaction([
-    prisma.ticket.count({ where: base }),
-    prisma.ticket.count({ where: { ...base, status: 'OPEN' } }),
-    prisma.ticket.count({ where: { ...base, status: 'RESOLVED' } }),
-    prisma.ticket.count({ where: { ...base, priority: 'CRITICAL' } }),
-    prisma.ticket.count({ where: { ...base, priority: 'CRITICAL', status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
-  ]);
-  return { total, open, resolved, critical, criticalUnresolved };
+  const groups = await prisma.ticket.groupBy({
+    by: ['status', 'priority'],
+    where: dateWhere(range),
+    _count: { _all: true },
+  });
+
+  const summary = { total: 0, open: 0, resolved: 0, critical: 0, criticalUnresolved: 0 };
+  for (const { status, priority, _count } of groups) {
+    const n = _count._all;
+    summary.total += n;
+    if (status === 'OPEN') summary.open += n;
+    if (status === 'RESOLVED') summary.resolved += n;
+    if (priority === 'CRITICAL') {
+      summary.critical += n;
+      if (status === 'OPEN' || status === 'IN_PROGRESS') summary.criticalUnresolved += n;
+    }
+  }
+  return summary;
 }
 
 // Counts per value, with zeros filled in so charts always have every category.

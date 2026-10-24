@@ -17,11 +17,13 @@ async function resetDb() {
 
 // Two users and three categories used as reference data by most tests.
 async function seedRefs() {
-  const alice = await prisma.user.create({ data: { name: 'Alice Test', email: 'alice@test.example' } });
-  const bob = await prisma.user.create({ data: { name: 'Bob Test', email: 'bob@test.example' } });
-  const billing = await prisma.category.create({ data: { name: 'Billing' } });
-  const technical = await prisma.category.create({ data: { name: 'Technical' } });
-  const account = await prisma.category.create({ data: { name: 'Account' } });
+  const [alice, bob, billing, technical, account] = await Promise.all([
+    prisma.user.create({ data: { name: 'Alice Test', email: 'alice@test.example' } }),
+    prisma.user.create({ data: { name: 'Bob Test', email: 'bob@test.example' } }),
+    prisma.category.create({ data: { name: 'Billing' } }),
+    prisma.category.create({ data: { name: 'Technical' } }),
+    prisma.category.create({ data: { name: 'Account' } }),
+  ]);
   return { users: { alice, bob }, categories: { billing, technical, account } };
 }
 

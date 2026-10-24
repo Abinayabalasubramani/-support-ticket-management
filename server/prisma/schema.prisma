@@ -28,11 +28,19 @@ enum ActivityType {
   TICKET_EDITED
 }
 
+enum Role {
+  ADMIN
+  AGENT
+}
+
 model User {
-  id      Int      @id @default(autoincrement())
-  name    String
-  email   String   @unique
-  tickets Ticket[]
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  // bcrypt hash, never the password itself. Optional so a user without a password simply cannot log in.
+  passwordHash String?
+  role         Role     @default(AGENT)
+  tickets      Ticket[]
 }
 
 model Category {

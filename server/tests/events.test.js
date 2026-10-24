@@ -1,5 +1,5 @@
 const http = require('http');
-const request = require('supertest');
+const { api } = require('./helpers/auth');
 const app = require('../src/app');
 const events = require('../src/events/ticketEvents');
 const { prisma, resetDb, seedRefs, makeTicket } = require('./helpers/db');
@@ -38,10 +38,12 @@ async function until(condition, ms = 5000) {
 
 const newTicket = (status = 'OPEN') => makeTicket({ status, categoryId: refs.categories.billing.id });
 
-// Opens the real event stream over HTTP and lets a test wait for text to arrive.
-function openStream() {
+// Opens the real event stream over HTTP (with a fresh single-use ticket, as the browser does)
+// and lets a test wait for text to arrive.
+async function openStream() {
+  const { body } = await api().post('/api/auth/stream-ticket');
   return new Promise((resolve, reject) => {
-    const req = http.get({ port, path: '/api/events', headers: { Accept: 'text/event-stream' } }, (res) => {
+    const req = http.get({ port, path: `/api/events?ticket=${body.ticket}`, headers: { Accept: 'text/event-stream' } }, (res) => {
       let buffer = '';
       const waiters = [];
       res.setEncoding('utf8');
@@ -105,7 +107,7 @@ describe('event stream', () => {
     const stream = await openStream();
     try {
       await stream.waitFor('event: ready');
-      const created = await request(app).post('/api/tickets').send({ title: 'Live one', description: 'd', categoryId: refs.categories.billing.id });
+      const created = await api().post('/api/tickets').send({ title: 'Live one', description: 'd', categoryId: refs.categories.billing.id });
 
       await stream.waitFor('ticket.created');
       const event = lastTicketEvent(stream.text());
@@ -121,7 +123,7 @@ describe('event stream', () => {
     try {
       await Promise.all([a.waitFor('event: ready'), b.waitFor('event: ready')]);
       const t = await newTicket();
-      await request(app).delete(`/api/tickets/${t.id}`);
+      await api().delete(`/api/tickets/${t.id}`);
       await Promise.all([a.waitFor('ticket.deleted'), b.waitFor('ticket.deleted')]);
       expect(lastTicketEvent(a.text()).ids).toEqual([t.id]);
       expect(lastTicketEvent(b.text()).ids).toEqual([t.id]);
@@ -158,9 +160,9 @@ describe('what gets announced', () => {
 
   test('status change, edit and assignment announce ticket.updated with the id', async () => {
     const t = await newTicket();
-    await request(app).patch(`/api/tickets/${t.id}/status`).send({ status: 'IN_PROGRESS' });
-    await request(app).put(`/api/tickets/${t.id}`).send({ title: 'New title' });
-    await request(app).patch(`/api/tickets/${t.id}/assignee`).send({ assigneeId: refs.users.alice.id });
+    await api().patch(`/api/tickets/${t.id}/status`).send({ status: 'IN_PROGRESS' });
+    await api().put(`/api/tickets/${t.id}`).send({ title: 'New title' });
+    await api().patch(`/api/tickets/${t.id}/assignee`).send({ assigneeId: refs.users.alice.id });
 
     expect(received.map((e) => e.type)).toEqual(['ticket.updated', 'ticket.updated', 'ticket.updated']);
     expect(received.every((e) => e.ids[0] === t.id)).toBe(true);
@@ -169,7 +171,7 @@ describe('what gets announced', () => {
   test('bulk announces one event with only the tickets that actually changed', async () => {
     const ok = await newTicket('OPEN');
     const closed = await newTicket('CLOSED');
-    await request(app).patch('/api/tickets/bulk').send({ ids: [ok.id, closed.id, 999999], status: 'RESOLVED' });
+    await api().patch('/api/tickets/bulk').send({ ids: [ok.id, closed.id, 999999], status: 'RESOLVED' });
 
     expect(received).toHaveLength(1);
     expect(received[0]).toMatchObject({ type: 'tickets.bulk', ids: [ok.id] });
@@ -177,35 +179,35 @@ describe('what gets announced', () => {
 
   test('a bulk request where nothing changes announces nothing', async () => {
     const closed = await newTicket('CLOSED');
-    await request(app).patch('/api/tickets/bulk').send({ ids: [closed.id], status: 'OPEN' });
+    await api().patch('/api/tickets/bulk').send({ ids: [closed.id], status: 'OPEN' });
     expect(received).toHaveLength(0);
   });
 
   test('failed requests announce nothing', async () => {
     const closed = await newTicket('CLOSED');
-    await request(app).patch(`/api/tickets/${closed.id}/status`).send({ status: 'OPEN' }); // 409
-    await request(app).post('/api/tickets').send({ description: 'no title' }); // 400
-    await request(app).delete('/api/tickets/999999'); // 404
-    await request(app).put('/api/tickets/999999').send({ title: 'x' }); // 404
+    await api().patch(`/api/tickets/${closed.id}/status`).send({ status: 'OPEN' }); // 409
+    await api().post('/api/tickets').send({ description: 'no title' }); // 400
+    await api().delete('/api/tickets/999999'); // 404
+    await api().put('/api/tickets/999999').send({ title: 'x' }); // 404
     expect(received).toHaveLength(0);
   });
 
   test('the event carries the sender X-Client-Id so that tab can ignore it', async () => {
     const t = await newTicket();
-    await request(app).patch(`/api/tickets/${t.id}/status`).set('X-Client-Id', 'tab-123').send({ status: 'RESOLVED' });
+    await api().patch(`/api/tickets/${t.id}/status`).set('X-Client-Id', 'tab-123').send({ status: 'RESOLVED' });
     expect(received[0].origin).toBe('tab-123');
   });
 
   test('without the header the origin is null', async () => {
     const t = await newTicket();
-    await request(app).patch(`/api/tickets/${t.id}/status`).send({ status: 'RESOLVED' });
+    await api().patch(`/api/tickets/${t.id}/status`).send({ status: 'RESOLVED' });
     expect(received[0].origin).toBeNull();
   });
 
   test('event ids increase so clients can resume in order', async () => {
     const t = await newTicket();
-    await request(app).patch(`/api/tickets/${t.id}/status`).send({ status: 'IN_PROGRESS' });
-    await request(app).patch(`/api/tickets/${t.id}/status`).send({ status: 'RESOLVED' });
+    await api().patch(`/api/tickets/${t.id}/status`).send({ status: 'IN_PROGRESS' });
+    await api().patch(`/api/tickets/${t.id}/status`).send({ status: 'RESOLVED' });
     expect(received[1].id).toBeGreaterThan(received[0].id);
   });
 });

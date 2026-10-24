@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import {
@@ -10,6 +10,7 @@ import {
   useGetTicketActivityQuery,
   useGetTicketQuery,
 } from '../api/apiSlice';
+import { selectIsAdmin } from '../features/auth/authSlice';
 import { openEditForm } from '../features/ui/uiSlice';
 import { getErrorMessage } from '../utils/errors';
 import { STATUS_LABELS } from '../utils/labels';
@@ -42,9 +43,11 @@ export default function TicketDetailPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const toast = useToast();
+  const isAdmin = useSelector(selectIsAdmin);
 
   const ticketQuery = useGetTicketQuery(id);
-  const historyQuery = useGetTicketActivityQuery(id, { skip: !ticketQuery.data });
+  // Asked at the same time as the ticket (not after it), so the two requests overlap instead of queueing.
+  const historyQuery = useGetTicketActivityQuery(id);
   const { data: meta } = useGetMetaQuery();
 
   const [changeStatus, { isLoading: isChangingStatus }] = useChangeStatusMutation();
@@ -142,9 +145,11 @@ export default function TicketDetailPage() {
             <button type="button" onClick={() => dispatch(openEditForm(ticket))} className="btn-secondary">
               <Pencil className="h-4 w-4" /> Edit
             </button>
-            <button type="button" onClick={() => setConfirmDelete(true)} className="btn-secondary text-red-500 hover:text-red-400">
-              <Trash2 className="h-4 w-4" /> Delete
-            </button>
+            {isAdmin && (
+              <button type="button" onClick={() => setConfirmDelete(true)} className="btn-secondary text-red-500 hover:text-red-400">
+                <Trash2 className="h-4 w-4" /> Delete
+              </button>
+            )}
           </div>
         </div>
 

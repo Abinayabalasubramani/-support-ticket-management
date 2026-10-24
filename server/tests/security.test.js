@@ -4,6 +4,7 @@ const app = require('../src/app');
 const requestId = require('../src/middleware/requestId');
 const { createLimiters } = require('../src/middleware/rateLimiter');
 const { prisma } = require('./helpers/db');
+const { api } = require('./helpers/auth');
 
 afterAll(() => prisma.$disconnect());
 
@@ -79,6 +80,6 @@ describe('rate limiting', () => {
   });
 
   test('the real app does not limit during tests', async () => {
-    for (let i = 0; i < 5; i++) expect((await request(app).get('/api/nope')).status).toBe(404);
+    for (let i = 0; i < 5; i++) expect((await api().get('/api/nope')).status).toBe(404);
   });
 });

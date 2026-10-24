@@ -1,5 +1,10 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+
+// Every demo user signs in with this password (documented in the README). Real deployments
+// would never share a password: this is demo data only.
+const DEMO_PASSWORD = 'Demo@12345';
 
 // DEMO DATA ONLY: this wipes every ticket, user and category before inserting sample data.
 if (process.env.NODE_ENV === 'production' && !process.argv.includes('--force')) {
@@ -26,12 +31,13 @@ const weighted = (entries) => {
   return entries[entries.length - 1][0];
 };
 
+// The admin can also delete tickets; agents can do everything else.
 const USERS = [
-  { name: 'Aarav Mehta', email: 'aarav.mehta@example.com' },
-  { name: 'Priya Nair', email: 'priya.nair@example.com' },
-  { name: 'Rahul Verma', email: 'rahul.verma@example.com' },
-  { name: 'Sneha Iyer', email: 'sneha.iyer@example.com' },
-  { name: 'Karthik Raj', email: 'karthik.raj@example.com' },
+  { name: 'Aarav Mehta', email: 'aarav.mehta@example.com', role: 'ADMIN' },
+  { name: 'Priya Nair', email: 'priya.nair@example.com', role: 'AGENT' },
+  { name: 'Rahul Verma', email: 'rahul.verma@example.com', role: 'AGENT' },
+  { name: 'Sneha Iyer', email: 'sneha.iyer@example.com', role: 'AGENT' },
+  { name: 'Karthik Raj', email: 'karthik.raj@example.com', role: 'AGENT' },
 ];
 
 // category -> { how many tickets, unique titles (at least that many), descriptions }
@@ -192,7 +198,10 @@ async function main() {
   );
 
   const users = [];
-  for (const u of USERS) users.push(await prisma.user.create({ data: u }));
+  for (const u of USERS) {
+    // Each user gets their own salted hash, even though the demo password is shared.
+    users.push(await prisma.user.create({ data: { ...u, passwordHash: await bcrypt.hash(DEMO_PASSWORD, 10) } }));
+  }
   const asPerson = (u) => (u ? { id: u.id, name: u.name } : null);
 
   const categories = {};
@@ -288,6 +297,7 @@ async function main() {
   console.log(
     `Seeded ${users.length} users, ${Object.keys(categories).length} categories, ${tickets} tickets, ${histories} status history rows, ${activities} activity entries.`
   );
+  console.log(`Demo sign-in: ${USERS[0].email} (admin) or ${USERS[1].email} (agent), password: ${DEMO_PASSWORD}`);
 }
 
 main()

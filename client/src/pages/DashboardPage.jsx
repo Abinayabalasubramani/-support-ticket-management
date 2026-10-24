@@ -18,7 +18,7 @@ import { RANGE_PHRASE, rangeFor } from '../utils/dateRange';
 const ATTENTION_QUERY = { priority: ['CRITICAL', 'HIGH'], status: ['OPEN', 'IN_PROGRESS'], sortBy: 'priority', order: 'desc', page: 1, limit: 3 };
 
 export default function DashboardPage() {
-  const [rangeKey, setRangeKey] = useState('30d');
+  const [rangeKey, setRangeKey] = useState('all');
   const [custom, setCustom] = useState({ from: '', to: '' });
 
   const range = rangeFor(rangeKey, custom);

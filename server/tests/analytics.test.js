@@ -1,11 +1,11 @@
-const request = require('supertest');
+const { api } = require('./helpers/auth');
 const app = require('../src/app');
 const { prisma, resetDb } = require('./helpers/db');
 const { seedListFixtures } = require('./helpers/fixtures');
 
 afterAll(() => prisma.$disconnect());
 
-const get = (path) => request(app).get(path);
+const get = (path) => api().get(path);
 const asMap = (rows, key) => Object.fromEntries(rows.map((r) => [r[key], r.count]));
 
 describe('with fixture data', () => {

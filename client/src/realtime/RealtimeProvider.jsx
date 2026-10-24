@@ -1,12 +1,14 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { apiSlice, baseUrl } from '../api/apiSlice';
 import { useToast } from '../components/common/Toast';
+import { selectToken } from '../features/auth/authSlice';
 import { CLIENT_ID } from './clientId';
 
 const RealtimeContext = createContext({ status: 'connecting' });
 
 const BATCH_MS = 300;
+const MAX_RETRY_MS = 30000;
 
 // What to tell the user about changes made elsewhere (one message per batch).
 function describe(events) {
@@ -18,27 +20,33 @@ function describe(events) {
   return `Ticket #${ids[0]} was updated by someone else`;
 }
 
-// Keeps one Server-Sent Events connection open and turns "a ticket changed somewhere else"
-// into a refresh of exactly the cached data that is affected. Status is 'connecting', 'live'
-// or 'offline'.
+// While a user is signed in, keeps one Server-Sent Events connection open and turns "a ticket
+// changed somewhere else" into a refresh of exactly the cached data that is affected.
+// Status is 'connecting', 'live' or 'offline'.
+//
+// The browser's EventSource cannot send a login header, so each connection starts with a
+// one-time ticket. A ticket can only be used once, so after a drop we do the reconnecting
+// ourselves (a fresh ticket each time, with growing delays) instead of relying on the browser.
 export function RealtimeProvider({ children }) {
   const dispatch = useDispatch();
   const toast = useToast();
+  const token = useSelector(selectToken);
   const [status, setStatus] = useState('connecting');
 
   useEffect(() => {
-    if (typeof EventSource === 'undefined') {
-      setStatus('offline');
-      return undefined;
-    }
+    if (!token || typeof EventSource === 'undefined') return undefined;
 
-    let pendingEvents = [];
-    let timer = null;
+    let source = null;
+    let retryTimer = null;
+    let batchTimer = null;
+    let cancelled = false;
+    let attempt = 0;
     let wasDown = false;
+    let pendingEvents = [];
 
     // Many events in a short burst (a bulk update) trigger one refresh and one message, not many.
     const flush = () => {
-      timer = null;
+      batchTimer = null;
       const batch = pendingEvents;
       pendingEvents = [];
       const ids = [...new Set(batch.flatMap((e) => e.ids))];
@@ -53,36 +61,61 @@ export function RealtimeProvider({ children }) {
       );
     };
 
-    const source = new EventSource(`${baseUrl}/events`);
-
-    // Sent by the server on every (re)connection.
-    source.addEventListener('ready', () => {
-      setStatus('live');
-      if (wasDown) {
-        // Events may have been missed while disconnected: refresh everything.
-        wasDown = false;
-        dispatch(apiSlice.util.invalidateTags(['Ticket', 'History', 'Analytics']));
-      }
-    });
-
-    source.addEventListener('ticket', (message) => {
-      const event = JSON.parse(message.data);
-      if (event.origin === CLIENT_ID) return; // our own change: the mutation already refreshed the data
-      pendingEvents.push(event);
-      if (!timer) timer = setTimeout(flush, BATCH_MS);
-    });
-
-    // The browser reconnects by itself (after the server's `retry` delay).
-    source.onerror = () => {
-      wasDown = true;
-      setStatus(source.readyState === EventSource.CLOSED ? 'offline' : 'connecting');
+    const scheduleRetry = () => {
+      if (cancelled) return;
+      attempt += 1;
+      retryTimer = setTimeout(connect, Math.min(1000 * 2 ** attempt, MAX_RETRY_MS));
     };
+
+    async function connect() {
+      try {
+        const { ticket } = await dispatch(apiSlice.endpoints.getStreamTicket.initiate()).unwrap();
+        if (cancelled) return;
+
+        source = new EventSource(`${baseUrl}/events?ticket=${encodeURIComponent(ticket)}`);
+
+        // Sent by the server on every (re)connection.
+        source.addEventListener('ready', () => {
+          attempt = 0;
+          setStatus('live');
+          if (wasDown) {
+            // Events may have been missed while disconnected: refresh everything.
+            wasDown = false;
+            dispatch(apiSlice.util.invalidateTags(['Ticket', 'History', 'Analytics']));
+          }
+        });
+
+        source.addEventListener('ticket', (message) => {
+          const event = JSON.parse(message.data);
+          if (event.origin === CLIENT_ID) return; // our own change: the mutation already refreshed the data
+          pendingEvents.push(event);
+          if (!batchTimer) batchTimer = setTimeout(flush, BATCH_MS);
+        });
+
+        source.onerror = () => {
+          source.close();
+          wasDown = true;
+          setStatus('connecting');
+          scheduleRetry();
+        };
+      } catch {
+        // No ticket (server unreachable, or the session ended and the sign-out is under way).
+        wasDown = true;
+        setStatus('offline');
+        scheduleRetry();
+      }
+    }
+
+    connect();
 
     return () => {
-      clearTimeout(timer);
-      source.close();
+      cancelled = true;
+      clearTimeout(retryTimer);
+      clearTimeout(batchTimer);
+      source?.close();
+      setStatus('connecting');
     };
-  }, [dispatch, toast]);
+  }, [token, dispatch, toast]);
 
   const value = useMemo(() => ({ status }), [status]);
   return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>;

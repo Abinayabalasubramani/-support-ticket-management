@@ -1,4 +1,4 @@
-const request = require('supertest');
+const { api } = require('./helpers/auth');
 const app = require('../src/app');
 const { prisma, resetDb, seedRefs, makeTicket } = require('./helpers/db');
 
@@ -11,7 +11,7 @@ beforeAll(async () => {
 
 afterAll(() => prisma.$disconnect());
 
-const bulk = (body) => request(app).patch('/api/tickets/bulk').send(body);
+const bulk = (body) => api().patch('/api/tickets/bulk').send(body);
 const newTicket = (status = 'OPEN', extra = {}) => makeTicket({ status, categoryId: refs.categories.billing.id, ...extra });
 const statusOf = async (id) => (await prisma.ticket.findUnique({ where: { id } })).status;
 const historyOf = (ticketId) => prisma.statusHistory.findMany({ where: { ticketId }, orderBy: { id: 'asc' } });
@@ -93,7 +93,7 @@ describe('bulk status change', () => {
   test('the same transition rules as the single-ticket endpoint apply', async () => {
     // OPEN -> CLOSED is rejected one at a time, so it must be rejected in bulk too.
     const t = await newTicket('OPEN');
-    const single = await request(app).patch(`/api/tickets/${t.id}/status`).send({ status: 'CLOSED' });
+    const single = await api().patch(`/api/tickets/${t.id}/status`).send({ status: 'CLOSED' });
     const batch = await bulk({ ids: [t.id], status: 'CLOSED' });
     expect(single.status).toBe(409);
     expect(batch.body.results[0].code).toBe(single.body.error.code);
@@ -174,7 +174,7 @@ describe('bulk validation', () => {
   test('unknown field -> 400', async () => expectInvalid(await bulk({ ids: [1], status: 'RESOLVED', priority: 'LOW' })));
 
   test('/bulk is not mistaken for a ticket id', async () => {
-    const res = await request(app).get('/api/tickets/bulk');
+    const res = await api().get('/api/tickets/bulk');
     expect(res.status).toBe(400); // GET /:id with id "bulk"
     expect(res.body.error.details[0].field).toBe('id');
   });

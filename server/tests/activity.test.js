@@ -1,4 +1,4 @@
-const request = require('supertest');
+const { api } = require('./helpers/auth');
 const app = require('../src/app');
 const { prisma, resetDb, seedRefs, makeTicket } = require('./helpers/db');
 
@@ -13,9 +13,9 @@ afterAll(() => prisma.$disconnect());
 
 const newTicket = (extra = {}) => makeTicket({ categoryId: refs.categories.billing.id, ...extra });
 const activityRows = (ticketId) => prisma.ticketActivity.findMany({ where: { ticketId }, orderBy: { id: 'asc' } });
-const feed = async (id) => (await request(app).get(`/api/tickets/${id}/activity`)).body;
-const assign = (id, assigneeId) => request(app).patch(`/api/tickets/${id}/assignee`).send({ assigneeId });
-const edit = (id, body) => request(app).put(`/api/tickets/${id}`).send(body);
+const feed = async (id) => (await api().get(`/api/tickets/${id}/activity`)).body;
+const assign = (id, assigneeId) => api().patch(`/api/tickets/${id}/assignee`).send({ assigneeId });
+const edit = (id, body) => api().put(`/api/tickets/${id}`).send(body);
 
 describe('assignee changes are logged', () => {
   test('first assignment: from nobody to a person, with the name as it was then', async () => {
@@ -128,7 +128,7 @@ describe('bulk assignment is logged per ticket', () => {
     const fromAlice = await newTicket({ assigneeId: refs.users.alice.id });
     const unassigned = await newTicket();
 
-    await request(app).patch('/api/tickets/bulk').send({ ids: [fromAlice.id, unassigned.id], assigneeId: refs.users.bob.id });
+    await api().patch('/api/tickets/bulk').send({ ids: [fromAlice.id, unassigned.id], assigneeId: refs.users.bob.id });
 
     const [a] = await activityRows(fromAlice.id);
     const [b] = await activityRows(unassigned.id);
@@ -140,7 +140,7 @@ describe('bulk assignment is logged per ticket', () => {
     const already = await newTicket({ assigneeId: refs.users.bob.id });
     const other = await newTicket();
 
-    const res = await request(app).patch('/api/tickets/bulk').send({ ids: [already.id, other.id], assigneeId: refs.users.bob.id });
+    const res = await api().patch('/api/tickets/bulk').send({ ids: [already.id, other.id], assigneeId: refs.users.bob.id });
 
     expect(res.body.summary).toEqual({ requested: 2, succeeded: 2, failed: 0 });
     expect(await activityRows(already.id)).toHaveLength(0);
@@ -149,14 +149,14 @@ describe('bulk assignment is logged per ticket', () => {
 
   test('bulk unassign records who each ticket was taken from', async () => {
     const t = await newTicket({ assigneeId: refs.users.alice.id });
-    await request(app).patch('/api/tickets/bulk').send({ ids: [t.id], assigneeId: null });
+    await api().patch('/api/tickets/bulk').send({ ids: [t.id], assigneeId: null });
     const [row] = await activityRows(t.id);
     expect(row.details).toEqual({ from: { id: refs.users.alice.id, name: 'Alice Test' }, to: null });
   });
 
   test('bulk status changes do not create activity entries (they live in the status history)', async () => {
     const t = await newTicket();
-    await request(app).patch('/api/tickets/bulk').send({ ids: [t.id], status: 'RESOLVED' });
+    await api().patch('/api/tickets/bulk').send({ ids: [t.id], status: 'RESOLVED' });
     expect(await activityRows(t.id)).toHaveLength(0);
   });
 });
@@ -164,12 +164,12 @@ describe('bulk assignment is logged per ticket', () => {
 describe('GET /api/tickets/:id/activity', () => {
   test('merges status changes, assignments and edits, newest first', async () => {
     const t = await newTicket({ title: 'Original' }); // created as OPEN
-    await request(app).patch(`/api/tickets/${t.id}/status`).send({ status: 'IN_PROGRESS' });
+    await api().patch(`/api/tickets/${t.id}/status`).send({ status: 'IN_PROGRESS' });
     await assign(t.id, refs.users.alice.id);
     await edit(t.id, { title: 'Renamed' });
-    await request(app).patch(`/api/tickets/${t.id}/status`).send({ status: 'RESOLVED' });
+    await api().patch(`/api/tickets/${t.id}/status`).send({ status: 'RESOLVED' });
 
-    const res = await request(app).get(`/api/tickets/${t.id}/activity`);
+    const res = await api().get(`/api/tickets/${t.id}/activity`);
 
     expect(res.status).toBe(200);
     expect(res.body.map((e) => e.kind)).toEqual(['status', 'edit', 'assignee', 'status', 'status']);
@@ -186,7 +186,7 @@ describe('GET /api/tickets/:id/activity', () => {
     const t = await newTicket();
     await assign(t.id, refs.users.alice.id);
     await edit(t.id, { priority: 'HIGH' });
-    await request(app).patch(`/api/tickets/${t.id}/status`).send({ status: 'RESOLVED' });
+    await api().patch(`/api/tickets/${t.id}/status`).send({ status: 'RESOLVED' });
 
     const entries = await feed(t.id);
     const times = entries.map((e) => new Date(e.at).getTime());
@@ -204,14 +204,14 @@ describe('GET /api/tickets/:id/activity', () => {
   test('the status-only history endpoint is unchanged', async () => {
     const t = await newTicket();
     await assign(t.id, refs.users.alice.id);
-    const res = await request(app).get(`/api/tickets/${t.id}/history`);
+    const res = await api().get(`/api/tickets/${t.id}/history`);
     expect(res.body).toHaveLength(1); // only the status change, no assignment
     expect(res.body[0]).toHaveProperty('toStatus', 'OPEN');
   });
 
   test('a missing ticket -> 404, a malformed id -> 400', async () => {
-    expect((await request(app).get('/api/tickets/999999/activity')).status).toBe(404);
-    expect((await request(app).get('/api/tickets/abc/activity')).status).toBe(400);
+    expect((await api().get('/api/tickets/999999/activity')).status).toBe(404);
+    expect((await api().get('/api/tickets/abc/activity')).status).toBe(400);
   });
 
   test('the log keeps the name it had at the time, even if the person is later deleted', async () => {
@@ -231,7 +231,7 @@ describe('GET /api/tickets/:id/activity', () => {
     await assign(t.id, refs.users.alice.id);
     expect(await activityRows(t.id)).toHaveLength(1);
 
-    await request(app).delete(`/api/tickets/${t.id}`);
+    await api().delete(`/api/tickets/${t.id}`);
     expect(await activityRows(t.id)).toHaveLength(0);
   });
 });

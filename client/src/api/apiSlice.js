@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-
+import { signedOut } from '../features/auth/authSlice';
 import { CLIENT_ID } from '../realtime/clientId';
 
 export const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -12,6 +12,29 @@ const cleanParams = (params = {}) =>
       .filter(([, value]) => value !== '' && value !== undefined && value !== null)
   );
 
+const rawBaseQuery = fetchBaseQuery({
+  baseUrl,
+  prepareHeaders: (headers, { getState }) => {
+    headers.set('X-Client-Id', CLIENT_ID);
+    const token = getState().auth.token;
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    return headers;
+  },
+});
+
+// Every request carries the login token. If the server says the session is no longer valid
+// (401), sign out, clear the cached data (it belongs to the previous session) and let the
+// router send the user to the login page. A wrong password at the login form is also a 401,
+// but there is no session to end, so that endpoint is excluded.
+const baseQueryWithAuth = async (args, api, extraOptions) => {
+  const result = await rawBaseQuery(args, api, extraOptions);
+  if (result.error?.status === 401 && api.endpoint !== 'login') {
+    api.dispatch(signedOut({ expired: result.error.data?.error?.code === 'TOKEN_EXPIRED' }));
+    api.dispatch(apiSlice.util.resetApiState());
+  }
+  return result;
+};
+
 // Cache tags: a mutation invalidates the tags it affects, and every query that
 // provides one of those tags refetches automatically. This is what keeps the
 // table, the detail page and the dashboard in sync without a page reload.
@@ -19,15 +42,18 @@ const cleanParams = (params = {}) =>
 //   History {id}  - a ticket's timeline  Analytics     - dashboard numbers
 export const apiSlice = createApi({
   reducerPath: 'api',
-  baseQuery: fetchBaseQuery({
-    baseUrl,
-    prepareHeaders: (headers) => {
-      headers.set('X-Client-Id', CLIENT_ID);
-      return headers;
-    },
-  }),
+  baseQuery: baseQueryWithAuth,
   tagTypes: ['Ticket', 'History', 'Analytics'],
   endpoints: (builder) => ({
+    login: builder.mutation({
+      query: (credentials) => ({ url: '/auth/login', method: 'POST', body: credentials }),
+    }),
+
+    // A one-time pass for opening the live-update stream.
+    getStreamTicket: builder.mutation({
+      query: () => ({ url: '/auth/stream-ticket', method: 'POST' }),
+    }),
+
     // Reference data for dropdowns. Rarely changes, so keep it cached for an hour.
     getMeta: builder.query({
       query: () => '/meta',
@@ -136,6 +162,7 @@ export const apiSlice = createApi({
 });
 
 export const {
+  useLoginMutation,
   useGetMetaQuery,
   useGetTicketsQuery,
   useGetTicketQuery,
