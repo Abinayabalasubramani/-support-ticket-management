@@ -133,10 +133,12 @@ async function listTickets({ page, limit, sortBy, order, search, status, priorit
   }
 
   if (search) {
+    // Prisma does not escape LIKE wildcards, so "%" and "_" would match everything.
+    const term = search.replace(/[\\%_]/g, '\\$&');
     and.push({
       OR: [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
+        { title: { contains: term, mode: 'insensitive' } },
+        { description: { contains: term, mode: 'insensitive' } },
       ],
     });
   }

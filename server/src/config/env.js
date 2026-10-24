@@ -1,5 +1,11 @@
-require('dotenv').config();
 const { z } = require('zod');
+
+// Tests load .env.test (a separate schema); everything else loads .env.
+// Variables already present in the environment always win.
+require('dotenv').config({
+  path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env',
+  quiet: true,
+});
 
 const schema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
@@ -19,6 +25,12 @@ if (!parsed.success) {
 }
 
 const env = parsed.data;
+
+// Safety net: tests delete data, so refuse to run them against anything but the test schema.
+if (env.NODE_ENV === 'test' && !/[?&]schema=test(&|$)/.test(env.DATABASE_URL)) {
+  console.error('Refusing to run tests: DATABASE_URL must target the "test" schema (?schema=test).');
+  process.exit(1);
+}
 
 module.exports = {
   ...env,

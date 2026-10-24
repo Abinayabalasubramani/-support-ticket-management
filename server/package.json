@@ -16,6 +16,13 @@
   "prisma": {
     "seed": "node prisma/seed.js"
   },
+  "jest": {
+    "testEnvironment": "node",
+    "roots": ["<rootDir>/tests"],
+    "testMatch": ["**/*.test.js"],
+    "globalSetup": "<rootDir>/tests/globalSetup.js",
+    "testTimeout": 30000
+  },
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "cors": "^2.8.6",
