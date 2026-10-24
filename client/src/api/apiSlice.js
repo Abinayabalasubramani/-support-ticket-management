@@ -52,6 +52,12 @@ export const apiSlice = createApi({
       providesTags: (result, error, id) => [{ type: 'History', id }],
     }),
 
+    // The full timeline: status changes, assignee changes and edits, newest first.
+    getTicketActivity: builder.query({
+      query: (id) => `/tickets/${id}/activity`,
+      providesTags: (result, error, id) => [{ type: 'History', id }],
+    }),
+
     createTicket: builder.mutation({
       query: (body) => ({ url: '/tickets', method: 'POST', body }),
       invalidatesTags: [{ type: 'Ticket', id: 'LIST' }, 'Analytics'],
@@ -62,6 +68,7 @@ export const apiSlice = createApi({
       invalidatesTags: (result, error, { id }) => [
         { type: 'Ticket', id },
         { type: 'Ticket', id: 'LIST' },
+        { type: 'History', id }, // an edit adds a timeline entry
         'Analytics', // a priority change moves the "critical" count
       ],
     }),
@@ -81,6 +88,7 @@ export const apiSlice = createApi({
       invalidatesTags: (result, error, { id }) => [
         { type: 'Ticket', id },
         { type: 'Ticket', id: 'LIST' },
+        { type: 'History', id }, // an assignment adds a timeline entry
       ],
     }),
 
@@ -132,6 +140,7 @@ export const {
   useGetTicketsQuery,
   useGetTicketQuery,
   useGetTicketHistoryQuery,
+  useGetTicketActivityQuery,
   useCreateTicketMutation,
   useUpdateTicketMutation,
   useChangeStatusMutation,

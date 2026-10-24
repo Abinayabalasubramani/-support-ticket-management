@@ -15,5 +15,6 @@ router.patch('/:id/status', validate({ params: v.idParams, body: v.statusBody })
 router.patch('/:id/assignee', validate({ params: v.idParams, body: v.assigneeBody }), controller.assign);
 router.delete('/:id', validate({ params: v.idParams }), controller.remove);
 router.get('/:id/history', validate({ params: v.idParams }), controller.history);
+router.get('/:id/activity', validate({ params: v.idParams }), controller.activity);
 
 module.exports = router;

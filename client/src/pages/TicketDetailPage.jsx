@@ -7,7 +7,7 @@ import {
   useChangeStatusMutation,
   useDeleteTicketMutation,
   useGetMetaQuery,
-  useGetTicketHistoryQuery,
+  useGetTicketActivityQuery,
   useGetTicketQuery,
 } from '../api/apiSlice';
 import { openEditForm } from '../features/ui/uiSlice';
@@ -44,7 +44,7 @@ export default function TicketDetailPage() {
   const toast = useToast();
 
   const ticketQuery = useGetTicketQuery(id);
-  const historyQuery = useGetTicketHistoryQuery(id, { skip: !ticketQuery.data });
+  const historyQuery = useGetTicketActivityQuery(id, { skip: !ticketQuery.data });
   const { data: meta } = useGetMetaQuery();
 
   const [changeStatus, { isLoading: isChangingStatus }] = useChangeStatusMutation();

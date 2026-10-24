@@ -17,10 +17,24 @@ beforeAll(async () => {
   port = server.address().port;
 });
 
+// Every stream a test opens is tracked and closed afterwards, even when an assertion failed,
+// because an open event stream keeps the HTTP server (and Jest) from shutting down.
+const openStreams = [];
+afterEach(() => openStreams.splice(0).forEach((stream) => stream.close()));
+
 afterAll(async () => {
+  server.closeAllConnections();
   await new Promise((resolve) => server.close(resolve));
   await prisma.$disconnect();
 });
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Polls until the condition is true (a closed connection is noticed a moment later).
+async function until(condition, ms = 5000) {
+  const end = Date.now() + ms;
+  while (!condition() && Date.now() < end) await sleep(50);
+}
 
 const newTicket = (status = 'OPEN') => makeTicket({ status, categoryId: refs.categories.billing.id });
 
@@ -58,7 +72,9 @@ function openStream() {
           check();
         });
 
-      resolve({ res, waitFor, text: () => buffer, close: () => req.destroy() });
+      const stream = { res, waitFor, text: () => buffer, close: () => req.destroy() };
+      openStreams.push(stream);
+      resolve(stream);
     });
     req.on('error', reject);
   });
@@ -116,16 +132,17 @@ describe('event stream', () => {
   });
 
   test('a closed connection is cleaned up (no leaked listener)', async () => {
-    const before = events.subscriberCount();
+    // Streams from earlier tests may still be shutting down: start from a settled zero.
+    await until(() => events.subscriberCount() === 0);
+    expect(events.subscriberCount()).toBe(0);
+
     const stream = await openStream();
     await stream.waitFor('event: ready');
-    expect(events.subscriberCount()).toBe(before + 1);
+    expect(events.subscriberCount()).toBe(1);
 
     stream.close();
-    for (let i = 0; i < 40 && events.subscriberCount() > before; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-    expect(events.subscriberCount()).toBe(before);
+    await until(() => events.subscriberCount() === 0);
+    expect(events.subscriberCount()).toBe(0);
   });
 });
 

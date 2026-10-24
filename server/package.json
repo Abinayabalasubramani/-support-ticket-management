@@ -18,8 +18,12 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "roots": ["<rootDir>/tests"],
-    "testMatch": ["**/*.test.js"],
+    "roots": [
+      "<rootDir>/tests"
+    ],
+    "testMatch": [
+      "**/*.test.js"
+    ],
     "globalSetup": "<rootDir>/tests/globalSetup.js",
     "globalTeardown": "<rootDir>/tests/globalTeardown.js",
     "testTimeout": 30000
@@ -32,6 +36,8 @@
     "cors": "^2.8.6",
     "dotenv": "^18.0.9",
     "express": "^4.22.3",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
     "prisma": "^6.19.3",
     "zod": "^4.6.7"
   },

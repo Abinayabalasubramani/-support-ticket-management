@@ -1,0 +1,6 @@
+# Store and check out text files with LF line endings on every machine,
+# so Windows does not show "LF will be replaced by CRLF" warnings.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.woff2 binary

@@ -54,4 +54,8 @@ const history = asyncHandler(async (req, res) => {
   res.json(await service.getHistory(req.params.id));
 });
 
-module.exports = { list, create, getOne, update, changeStatus, assign, bulk, remove, history };
+const activity = asyncHandler(async (req, res) => {
+  res.json(await service.getActivity(req.params.id));
+});
+
+module.exports = { list, create, getOne, update, changeStatus, assign, bulk, remove, history, activity };
