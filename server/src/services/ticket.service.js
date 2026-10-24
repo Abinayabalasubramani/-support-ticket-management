@@ -116,7 +116,56 @@ async function getHistory(id) {
   });
 }
 
+async function listTickets({ page, limit, sortBy, order, search, status, priority, category, assignee }) {
+  const and = [];
+
+  if (status) and.push({ status: { in: status } });
+  if (priority) and.push({ priority: { in: priority } });
+  if (category) and.push({ categoryId: { in: category } });
+
+  if (assignee) {
+    const ids = assignee.filter((a) => a !== 'unassigned');
+    const includeUnassigned = assignee.includes('unassigned');
+    const options = [];
+    if (ids.length) options.push({ assigneeId: { in: ids } });
+    if (includeUnassigned) options.push({ assigneeId: null });
+    and.push({ OR: options });
+  }
+
+  if (search) {
+    and.push({
+      OR: [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ],
+    });
+  }
+
+  const where = and.length ? { AND: and } : {};
+
+  // id is the tie-breaker so rows never repeat or vanish between pages.
+  const orderBy = [{ [sortBy]: order }, { id: order }];
+
+  // Rows and total use the same `where`, so pagination always matches the filters.
+  const [rows, total] = await prisma.$transaction([
+    prisma.ticket.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * limit,
+      take: limit,
+      include: ticketInclude,
+    }),
+    prisma.ticket.count({ where }),
+  ]);
+
+  return {
+    data: rows.map(withTransitions),
+    meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
+}
+
 module.exports = {
+  listTickets,
   createTicket,
   getTicket,
   updateTicket,

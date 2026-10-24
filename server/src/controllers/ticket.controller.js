@@ -1,6 +1,10 @@
 const service = require('../services/ticket.service');
 const asyncHandler = require('../utils/asyncHandler');
 
+const list = asyncHandler(async (req, res) => {
+  res.json(await service.listTickets(req.query));
+});
+
 const create = asyncHandler(async (req, res) => {
   res.status(201).json(await service.createTicket(req.body));
 });
@@ -30,4 +34,4 @@ const history = asyncHandler(async (req, res) => {
   res.json(await service.getHistory(req.params.id));
 });
 
-module.exports = { create, getOne, update, changeStatus, assign, remove, history };
+module.exports = { list, create, getOne, update, changeStatus, assign, remove, history };
