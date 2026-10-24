@@ -10,6 +10,7 @@ import Pagination from '../components/common/Pagination';
 import { useToast } from '../components/common/Toast';
 import FilterBar from '../components/tickets/FilterBar';
 import TableSkeleton from '../components/tickets/TableSkeleton';
+import TicketFormModal from '../components/tickets/TicketFormModal';
 import TicketTable from '../components/tickets/TicketTable';
 
 export default function TicketsPage() {
@@ -21,6 +22,8 @@ export default function TicketsPage() {
   const { data, isLoading, isFetching, isError, error, refetch } = useGetTicketsQuery(filters);
   const [deleteTicket, { isLoading: isDeleting }] = useDeleteTicketMutation();
   const [pendingDelete, setPendingDelete] = useState(null);
+  // { ticket: null } = create form, { ticket } = edit form, null = closed
+  const [form, setForm] = useState(null);
 
   // After deleting the last row of the last page, the current page no longer exists: step back.
   useEffect(() => {
@@ -46,47 +49,70 @@ export default function TicketsPage() {
   };
 
   const tickets = data?.data ?? [];
+  const total = data?.meta.total;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-      <FilterBar />
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-slate-500">{total === undefined ? ' ' : `${total} ticket${total === 1 ? '' : 's'}`}</p>
+        <button
+          type="button"
+          onClick={() => setForm({ ticket: null })}
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          + New ticket
+        </button>
+      </div>
 
-      {isLoading && <TableSkeleton />}
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <FilterBar />
 
-      {isError && !data && <ErrorState error={error} onRetry={refetch} title="Could not load tickets" />}
+        {isLoading && <TableSkeleton />}
 
-      {data && tickets.length === 0 && data.meta.total === 0 && (
-        <EmptyState
-          title={hasActiveFilters ? 'No tickets match your filters' : 'No tickets yet'}
-          message={hasActiveFilters ? 'Try removing a filter or searching for something else.' : 'Tickets you create will appear here.'}
-          action={
-            hasActiveFilters && (
-              <button type="button" onClick={() => dispatch(resetFilters())} className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
-                Clear filters
-              </button>
-            )
-          }
-        />
-      )}
+        {isError && !data && <ErrorState error={error} onRetry={refetch} title="Could not load tickets" />}
 
-      {tickets.length > 0 && (
-        <>
-          <TicketTable
-            tickets={tickets}
-            sortBy={filters.sortBy}
-            order={filters.order}
-            onSort={onSort}
-            onDelete={setPendingDelete}
-            dimmed={isFetching}
+        {data && total === 0 && (
+          <EmptyState
+            title={hasActiveFilters ? 'No tickets match your filters' : 'No tickets yet'}
+            message={
+              hasActiveFilters
+                ? 'Try removing a filter or searching for something else.'
+                : 'Create the first ticket with the "New ticket" button.'
+            }
+            action={
+              hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={() => dispatch(resetFilters())}
+                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+                >
+                  Clear filters
+                </button>
+              )
+            }
           />
-          <Pagination
-            {...data.meta}
-            disabled={isFetching}
-            onPageChange={(p) => dispatch(setPage(p))}
-            onLimitChange={(n) => dispatch(setLimit(n))}
-          />
-        </>
-      )}
+        )}
+
+        {tickets.length > 0 && (
+          <>
+            <TicketTable
+              tickets={tickets}
+              sortBy={filters.sortBy}
+              order={filters.order}
+              onSort={onSort}
+              onEdit={(ticket) => setForm({ ticket })}
+              onDelete={setPendingDelete}
+              dimmed={isFetching}
+            />
+            <Pagination
+              {...data.meta}
+              disabled={isFetching}
+              onPageChange={(p) => dispatch(setPage(p))}
+              onLimitChange={(n) => dispatch(setLimit(n))}
+            />
+          </>
+        )}
+      </div>
 
       <ConfirmDialog
         open={Boolean(pendingDelete)}
@@ -98,6 +124,8 @@ export default function TicketsPage() {
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
       />
+
+      <TicketFormModal open={Boolean(form)} ticket={form?.ticket ?? null} onClose={() => setForm(null)} />
     </div>
   );
 }

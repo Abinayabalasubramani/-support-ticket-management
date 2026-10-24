@@ -31,7 +31,7 @@ function SortHeader({ column, sortBy, order, onSort }) {
   );
 }
 
-export default function TicketTable({ tickets, sortBy, order, onSort, onDelete, dimmed }) {
+export default function TicketTable({ tickets, sortBy, order, onSort, onEdit, onDelete, dimmed }) {
   return (
     <div className={`overflow-x-auto transition-opacity ${dimmed ? 'opacity-60' : ''}`}>
       <table className="min-w-full divide-y divide-slate-200">
@@ -63,6 +63,7 @@ export default function TicketTable({ tickets, sortBy, order, onSort, onDelete, 
               <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{formatDate(t.createdAt)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
                 <Link to={`/tickets/${t.id}`} className="mr-3 font-medium text-blue-600 hover:underline">View</Link>
+                <button type="button" onClick={() => onEdit(t)} className="mr-3 font-medium text-slate-600 hover:underline">Edit</button>
                 <button type="button" onClick={() => onDelete(t)} className="font-medium text-red-600 hover:underline">Delete</button>
               </td>
             </tr>
