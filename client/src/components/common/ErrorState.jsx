@@ -1,5 +1,5 @@
 import { TriangleAlert } from 'lucide-react';
-import { getErrorMessage } from '../../utils/errors';
+import { getErrorMessage, getErrorRef } from '../../utils/errors';
 
 export default function ErrorState({ error, onRetry, title = 'Could not load data' }) {
   return (
@@ -9,6 +9,7 @@ export default function ErrorState({ error, onRetry, title = 'Could not load dat
       </div>
       <h3 className="text-base font-semibold text-fg">{title}</h3>
       <p className="mt-1 max-w-md text-sm text-muted">{getErrorMessage(error)}</p>
+      {getErrorRef(error) && <p className="mt-1 text-xs text-faint">Reference: {getErrorRef(error)}</p>}
       {onRetry && (
         <button type="button" onClick={onRetry} className="btn-primary mt-4">
           Retry

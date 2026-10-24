@@ -1,15 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ArrowUpDown, Ticket } from 'lucide-react';
-import { useDeleteTicketMutation, useGetTicketsQuery } from '../api/apiSlice';
+import { useBulkUpdateMutation, useDeleteTicketMutation, useGetMetaQuery, useGetTicketsQuery } from '../api/apiSlice';
 import { resetFilters, selectFilters, selectHasActiveFilters, setLimit, setPage, setSort } from '../features/filters/filtersSlice';
 import { openEditForm } from '../features/ui/uiSlice';
 import { getErrorMessage } from '../utils/errors';
+import { STATUS_LABELS } from '../utils/labels';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import EmptyState from '../components/common/EmptyState';
 import ErrorState from '../components/common/ErrorState';
 import Pagination from '../components/common/Pagination';
 import { useToast } from '../components/common/Toast';
+import BulkBar from '../components/tickets/BulkBar';
+import BulkResultDialog from '../components/tickets/BulkResultDialog';
 import FilterBar from '../components/tickets/FilterBar';
 import TableSkeleton from '../components/tickets/TableSkeleton';
 import TicketTable from '../components/tickets/TicketTable';
@@ -25,6 +28,8 @@ const SORT_OPTIONS = [
   { value: 'title:desc', label: 'Title (Z–A)' },
 ];
 
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
 export default function TicketsPage() {
   const dispatch = useDispatch();
   const toast = useToast();
@@ -32,8 +37,14 @@ export default function TicketsPage() {
   const hasActiveFilters = useSelector(selectHasActiveFilters);
 
   const { data, isLoading, isFetching, isError, error, refetch } = useGetTicketsQuery(filters);
+  const { data: meta } = useGetMetaQuery();
   const [deleteTicket, { isLoading: isDeleting }] = useDeleteTicketMutation();
+  const [bulkUpdate, { isLoading: isBulkUpdating }] = useBulkUpdateMutation();
+
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [selected, setSelected] = useState(() => new Set());
+  const [pendingBulk, setPendingBulk] = useState(null); // { status } or { assigneeId }
+  const [bulkResult, setBulkResult] = useState(null);
 
   // After deleting the last row of the last page, the current page no longer exists: step back.
   useEffect(() => {
@@ -41,6 +52,15 @@ export default function TicketsPage() {
       dispatch(setPage(data.meta.totalPages));
     }
   }, [data, dispatch]);
+
+  // A different search, filter, sort or page is a different set of rows: start with nothing selected.
+  useEffect(() => {
+    setSelected(new Set());
+  }, [filters]);
+
+  const tickets = data?.data ?? [];
+  const total = data?.meta.total;
+  const titles = useMemo(() => Object.fromEntries(tickets.map((t) => [t.id, t.title])), [tickets]);
 
   const onSort = (key) => {
     const sameColumn = filters.sortBy === key;
@@ -51,6 +71,21 @@ export default function TicketsPage() {
     const [sortBy, order] = e.target.value.split(':');
     dispatch(setSort({ sortBy, order }));
   };
+
+  const toggleOne = (id) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const togglePage = (checked) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      tickets.forEach((t) => (checked ? next.add(t.id) : next.delete(t.id)));
+      return next;
+    });
 
   const confirmDelete = async () => {
     try {
@@ -63,23 +98,52 @@ export default function TicketsPage() {
     }
   };
 
-  const tickets = data?.data ?? [];
-  const total = data?.meta.total;
+  const runBulk = async () => {
+    const ids = [...selected];
+    try {
+      const result = await bulkUpdate({ ids, ...pendingBulk }).unwrap();
+      const { succeeded, failed } = result.summary;
+
+      if (failed === 0) {
+        toast.success(`${plural(succeeded, 'ticket')} updated`);
+        setSelected(new Set());
+      } else {
+        // Keep only the skipped tickets selected so the user can see and fix them.
+        toast.success(`${succeeded} updated, ${failed} skipped`);
+        setSelected(new Set(result.results.filter((r) => !r.ok).map((r) => r.id)));
+        setBulkResult(result);
+      }
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setPendingBulk(null);
+    }
+  };
+
+  const assigneeName = (id) => meta?.users.find((u) => u.id === id)?.name;
+  const bulkMessage = () => {
+    if (!pendingBulk) return '';
+    const n = plural(selected.size, 'ticket');
+    if (pendingBulk.status) {
+      return `Move ${n} to ${STATUS_LABELS[pendingBulk.status]}? Tickets that cannot make this move will be skipped, and you will see which ones.`;
+    }
+    return pendingBulk.assigneeId === null ? `Remove the assignee from ${n}?` : `Assign ${n} to ${assigneeName(pendingBulk.assigneeId) ?? 'this person'}?`;
+  };
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-soft text-primary">
+        <div className="flex min-w-0 items-center gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
             <Ticket className="h-6 w-6" />
           </span>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-3xl font-semibold tracking-tight text-fg">Tickets</h1>
             <p className="text-sm text-muted">Manage and track all support tickets in one place.</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <p className="card px-4 py-2.5 text-sm text-muted" aria-live="polite">
             <span className="text-lg font-semibold text-fg">{total ?? '–'}</span> ticket{total === 1 ? '' : 's'}
           </p>
@@ -100,6 +164,16 @@ export default function TicketsPage() {
       <FilterBar />
 
       <div className="card overflow-hidden">
+        {selected.size > 0 && (
+          <BulkBar
+            count={selected.size}
+            busy={isBulkUpdating}
+            onClear={() => setSelected(new Set())}
+            onPickStatus={(status) => setPendingBulk({ status })}
+            onPickAssignee={(assigneeId) => setPendingBulk({ assigneeId })}
+          />
+        )}
+
         {isLoading && <TableSkeleton />}
 
         {isError && !data && <ErrorState error={error} onRetry={refetch} title="Could not load tickets" />}
@@ -122,6 +196,9 @@ export default function TicketsPage() {
           <>
             <TicketTable
               tickets={tickets}
+              selectedIds={selected}
+              onToggle={toggleOne}
+              onTogglePage={togglePage}
               sortBy={filters.sortBy}
               order={filters.order}
               onSort={onSort}
@@ -144,6 +221,18 @@ export default function TicketsPage() {
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
       />
+
+      <ConfirmDialog
+        open={Boolean(pendingBulk)}
+        loading={isBulkUpdating}
+        title={pendingBulk?.status ? 'Change status?' : 'Update assignee?'}
+        message={bulkMessage()}
+        confirmLabel="Apply"
+        onConfirm={runBulk}
+        onCancel={() => setPendingBulk(null)}
+      />
+
+      <BulkResultDialog result={bulkResult} titles={titles} onClose={() => setBulkResult(null)} />
     </div>
   );
 }

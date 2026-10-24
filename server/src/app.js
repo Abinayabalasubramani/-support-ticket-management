@@ -5,10 +5,13 @@ const prisma = require('./config/prisma');
 const routes = require('./routes');
 const notFound = require('./middleware/notFound');
 const errorHandler = require('./middleware/errorHandler');
+const requestId = require('./middleware/requestId');
 
 const app = express();
 
-app.use(cors({ origin: corsOrigins }));
+app.use(requestId);
+// The browser may only read X-Request-Id if the server exposes it.
+app.use(cors({ origin: corsOrigins, exposedHeaders: ['X-Request-Id'] }));
 app.use(express.json());
 
 // Liveness + database connectivity. Also used by the uptime pinger.

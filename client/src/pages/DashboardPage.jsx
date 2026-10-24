@@ -35,8 +35,8 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-fg">Dashboard</h1>
+        <div className="min-w-0">
+          <h1 className="text-3xl font-semibold tracking-tight text-fg sm:text-4xl">Dashboard</h1>
           <p className="mt-1 text-muted">Support operations at a glance.</p>
         </div>
         <RangeSelector rangeKey={rangeKey} onRangeKey={setRangeKey} custom={custom} onCustom={setCustom} invalid={invalid} />
@@ -45,14 +45,14 @@ export default function DashboardPage() {
       <StatStrip summary={summary} volume={volume} />
 
       <div className="grid gap-6 xl:grid-cols-5">
-        <div className="card space-y-6 p-6 xl:col-span-3">
+        <div className="card min-w-0 space-y-6 p-4 sm:p-6 xl:col-span-3">
           <VolumeChart query={volume} phrase={RANGE_PHRASE[rangeKey]} />
           <div className="border-t border-line pt-6">
             <WorkflowBar query={byStatus} />
           </div>
         </div>
 
-        <div className="card space-y-6 p-6 xl:col-span-2">
+        <div className="card min-w-0 space-y-6 p-4 sm:p-6 xl:col-span-2">
           <PriorityDonut query={byPriority} />
           <NeedsAttention query={attention} />
         </div>

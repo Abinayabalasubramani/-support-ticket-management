@@ -16,6 +16,9 @@ export function getErrorMessage(error) {
   return 'Something went wrong. Please try again.';
 }
 
+// The id the server attached to this failure (also in its logs), shown so a user can quote it.
+export const getErrorRef = (error) => error?.data?.error?.requestId ?? '';
+
 // Field-level validation messages from a 400 response: { fieldName: 'message' }
 export function getFieldErrors(error) {
   const details = error?.data?.error?.details;

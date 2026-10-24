@@ -12,11 +12,13 @@ export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen">
+    // overflow-x-clip is a safety net: if anything is ever too wide, the page never scrolls sideways.
+    <div className="min-h-screen overflow-x-clip">
       <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
-      <div className="md:pl-64">
+      {/* min-w-0: a flex/grid child may shrink below its content's width instead of stretching the page */}
+      <div className="min-w-0 md:pl-64">
         <Topbar onMenuClick={() => setMenuOpen(true)} />
-        <main className="mx-auto max-w-[1400px] p-4 sm:p-8">
+        <main className="mx-auto min-w-0 max-w-[1400px] p-4 sm:p-8">
           <Outlet />
         </main>
       </div>

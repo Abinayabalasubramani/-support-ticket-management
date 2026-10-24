@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import Avatar from '../common/Avatar';
+import Checkbox from '../common/Checkbox';
 import PriorityBadge from '../common/PriorityBadge';
 import StatusBadge from '../common/StatusBadge';
 import CategoryIcon from '../../utils/categoryIcons';
@@ -41,12 +42,18 @@ function SortHeader({ column, sortBy, order, onSort }) {
   );
 }
 
-export default function TicketTable({ tickets, sortBy, order, onSort, onEdit, onDelete, dimmed }) {
+export default function TicketTable({ tickets, selectedIds, onToggle, onTogglePage, sortBy, order, onSort, onEdit, onDelete, dimmed }) {
+  const selectedOnPage = tickets.filter((t) => selectedIds.has(t.id)).length;
+  const allSelected = tickets.length > 0 && selectedOnPage === tickets.length;
+
   return (
     <div className={`overflow-x-auto transition-opacity ${dimmed ? 'opacity-60' : ''}`}>
       <table className="min-w-full">
         <thead>
           <tr className="border-b border-line">
+            <th scope="col" className="w-12 py-3.5 pl-5 pr-2">
+              <Checkbox checked={allSelected} indeterminate={selectedOnPage > 0} onChange={onTogglePage} label="Select all tickets on this page" />
+            </th>
             {COLUMNS.map((c) => (
               <SortHeader key={c.key} column={c} sortBy={sortBy} order={order} onSort={onSort} />
             ))}
@@ -57,7 +64,10 @@ export default function TicketTable({ tickets, sortBy, order, onSort, onEdit, on
         </thead>
         <tbody className="divide-y divide-line">
           {tickets.map((t) => (
-            <tr key={t.id} className="transition-colors hover:bg-surface-2/60">
+            <tr key={t.id} className={`transition-colors hover:bg-surface-2/60 ${selectedIds.has(t.id) ? 'bg-primary-soft' : ''}`}>
+              <td className="w-12 py-4 pl-5 pr-2">
+                <Checkbox checked={selectedIds.has(t.id)} onChange={() => onToggle(t.id)} label={`Select ticket ${t.id}`} />
+              </td>
               <td className="whitespace-nowrap px-4 py-4">
                 <span className="rounded-md border border-line bg-surface-2 px-2 py-1 font-mono text-xs text-fg">#{t.id}</span>
               </td>

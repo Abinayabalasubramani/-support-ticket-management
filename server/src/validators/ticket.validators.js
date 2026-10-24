@@ -33,4 +33,23 @@ const statusBody = z.strictObject({ status: z.enum(STATUSES) });
 
 const assigneeBody = z.strictObject({ assigneeId: id.nullable() });
 
-module.exports = { idParams, createTicketBody, updateTicketBody, statusBody, assigneeBody };
+const MAX_BULK = 100;
+
+// One action per request: change the status OR the assignee of every listed ticket.
+// assigneeId: null means "unassign". Duplicate ids are collapsed.
+const bulkBody = z
+  .strictObject({
+    ids: z
+      .array(id)
+      .min(1, 'Select at least one ticket')
+      .max(MAX_BULK, `At most ${MAX_BULK} tickets per request`)
+      .transform((ids) => [...new Set(ids)]),
+    status: z.enum(STATUSES).optional(),
+    assigneeId: id.nullable().optional(),
+  })
+  .refine((v) => (v.status !== undefined) !== (v.assigneeId !== undefined), {
+    message: 'Provide exactly one of "status" or "assigneeId"',
+    path: ['status'],
+  });
+
+module.exports = { idParams, createTicketBody, updateTicketBody, statusBody, assigneeBody, bulkBody, MAX_BULK };

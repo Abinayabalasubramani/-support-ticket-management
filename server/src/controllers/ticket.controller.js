@@ -25,6 +25,10 @@ const assign = asyncHandler(async (req, res) => {
   res.json(await service.assignTicket(req.params.id, req.body.assigneeId));
 });
 
+const bulk = asyncHandler(async (req, res) => {
+  res.json(await service.bulkUpdate(req.body));
+});
+
 const remove = asyncHandler(async (req, res) => {
   await service.deleteTicket(req.params.id);
   res.status(204).send();
@@ -34,4 +38,4 @@ const history = asyncHandler(async (req, res) => {
   res.json(await service.getHistory(req.params.id));
 });
 
-module.exports = { list, create, getOne, update, changeStatus, assign, remove, history };
+module.exports = { list, create, getOne, update, changeStatus, assign, bulk, remove, history };

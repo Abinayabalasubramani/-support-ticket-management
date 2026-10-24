@@ -1,11 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+
+const PANEL_WIDTH = 240; // matches w-60
 
 // A boxed control (small label over the current value) that opens a checklist.
 // `selected` is an array of option values.
 export default function FilterDropdown({ label, options, selected, onChange }) {
   const [open, setOpen] = useState(false);
+  const [alignRight, setAlignRight] = useState(false);
   const ref = useRef(null);
+
+  // Open towards the left when the panel would run off the right edge of the screen (phones).
+  useLayoutEffect(() => {
+    if (!open || !ref.current) return;
+    const { left } = ref.current.getBoundingClientRect();
+    setAlignRight(left + PANEL_WIDTH > window.innerWidth - 8);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -25,25 +35,26 @@ export default function FilterDropdown({ label, options, selected, onChange }) {
   const summary = !active ? 'All' : selected.length === 1 ? options.find((o) => o.value === selected[0])?.label ?? '1 selected' : `${selected.length} selected`;
 
   return (
-    <div className="relative" ref={ref}>
+    // Two per row on a phone (flex-1), natural width on larger screens.
+    <div className="relative min-w-[8.5rem] flex-1 sm:flex-none" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`flex h-12 min-w-[9.5rem] items-center justify-between gap-3 rounded-lg border bg-surface-2 px-3.5 text-left transition-colors hover:border-primary/60 ${
+        className={`flex h-12 w-full items-center justify-between gap-3 rounded-lg border bg-surface-2 px-3.5 text-left transition-colors hover:border-primary/60 sm:min-w-[9.5rem] ${
           active ? 'border-primary' : 'border-line'
         }`}
       >
-        <span>
+        <span className="min-w-0">
           <span className="block text-[11px] leading-tight text-muted">{label}</span>
-          <span className="block text-sm leading-tight text-fg">{summary}</span>
+          <span className="block truncate text-sm leading-tight text-fg">{summary}</span>
         </span>
-        <ChevronDown className={`h-4 w-4 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-4 w-4 shrink-0 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="card absolute left-0 z-30 mt-2 max-h-72 w-60 overflow-auto py-1.5">
+        <div className={`card absolute z-30 mt-2 max-h-72 w-60 max-w-[calc(100vw-2rem)] overflow-auto py-1.5 ${alignRight ? 'right-0' : 'left-0'}`}>
           {options.length === 0 && <p className="px-3 py-2 text-sm text-faint">No options</p>}
           {options.map((opt) => (
             <label key={opt.value} className="flex cursor-pointer items-center gap-2.5 px-3.5 py-2 text-sm text-fg hover:bg-surface-2">

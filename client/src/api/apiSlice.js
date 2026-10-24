@@ -76,6 +76,17 @@ export const apiSlice = createApi({
       ],
     }),
 
+    // body: { ids: [...], status } or { ids: [...], assigneeId }. Returns a result per ticket.
+    bulkUpdate: builder.mutation({
+      query: (body) => ({ url: '/tickets/bulk', method: 'PATCH', body }),
+      invalidatesTags: (result, error, { ids }) => [
+        { type: 'Ticket', id: 'LIST' },
+        ...ids.map((id) => ({ type: 'Ticket', id })),
+        ...ids.map((id) => ({ type: 'History', id })),
+        'Analytics',
+      ],
+    }),
+
     deleteTicket: builder.mutation({
       query: (id) => ({ url: `/tickets/${id}`, method: 'DELETE' }),
       invalidatesTags: (result, error, id) => [
@@ -117,6 +128,7 @@ export const {
   useUpdateTicketMutation,
   useChangeStatusMutation,
   useAssignTicketMutation,
+  useBulkUpdateMutation,
   useDeleteTicketMutation,
   useGetSummaryQuery,
   useGetByStatusQuery,

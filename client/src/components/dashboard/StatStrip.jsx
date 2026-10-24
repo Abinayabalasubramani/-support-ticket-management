@@ -38,7 +38,7 @@ function Sparkline({ data }) {
 
 function Cell({ icon: Icon, tone, label, value, hint, loading, dimmed, children }) {
   return (
-    <div className="flex items-center gap-4 p-5 xl:p-6">
+    <div className="flex min-w-0 items-center gap-4 p-4 sm:p-5 xl:p-6">
       <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${tone}`}>
         <Icon className="h-6 w-6" />
       </span>
@@ -70,7 +70,7 @@ export default function StatStrip({ summary, volume }) {
   const common = { loading: summary.isLoading, dimmed: summary.isFetching };
 
   return (
-    <div className="card grid divide-y divide-line sm:grid-cols-2 sm:divide-y-0 xl:grid-cols-4 xl:divide-x">
+    <div className="card grid min-w-0 divide-y divide-line sm:grid-cols-2 sm:divide-y-0 xl:grid-cols-4 xl:divide-x">
       <Cell icon={Ticket} tone="bg-blue-500/15 text-blue-400" label="Total tickets" value={data?.total} hint="in selected period" {...common}>
         <Sparkline data={volume.data} />
       </Cell>

@@ -8,6 +8,7 @@ const router = Router();
 
 router.get('/', validate({ query: listTicketsQuery }), controller.list);
 router.post('/', validate({ body: v.createTicketBody }), controller.create);
+router.patch('/bulk', validate({ body: v.bulkBody }), controller.bulk);
 router.get('/:id', validate({ params: v.idParams }), controller.getOne);
 router.put('/:id', validate({ params: v.idParams, body: v.updateTicketBody }), controller.update);
 router.patch('/:id/status', validate({ params: v.idParams, body: v.statusBody }), controller.changeStatus);

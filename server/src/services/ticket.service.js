@@ -60,6 +60,10 @@ async function updateTicket(id, changes) {
   return withTransitions(ticket);
 }
 
+// Prisma closes an interactive transaction after 5 s by default. Be explicit, with room for
+// a slow database connection (the work inside is only a few small queries).
+const TX_OPTIONS = { maxWait: 10000, timeout: 30000 };
+
 async function changeStatus(id, newStatus) {
   return prisma.$transaction(async (tx) => {
     const current = await getTicketOrThrow(id, tx);
@@ -88,7 +92,7 @@ async function changeStatus(id, newStatus) {
     });
 
     return withTransitions(await getTicketOrThrow(id, tx));
-  });
+  }, TX_OPTIONS);
 }
 
 async function assignTicket(id, assigneeId) {
@@ -101,6 +105,68 @@ async function assignTicket(id, assigneeId) {
     include: ticketInclude,
   });
   return withTransitions(ticket);
+}
+
+const failure = (id, code, message) => ({ id, ok: false, code, message });
+
+// Change the status or the assignee of many tickets at once.
+// Every ticket is judged on its own: the ones that can be updated are, the others are
+// reported with the reason, so one bad ticket never blocks the rest.
+async function bulkUpdate({ ids, status, assigneeId }) {
+  if (assigneeId != null) await assertUserExists(assigneeId); // a wrong assignee is a request error, not a per-ticket one
+
+  const found = await prisma.ticket.findMany({ where: { id: { in: ids } }, select: { id: true, status: true } });
+  const byId = new Map(found.map((t) => [t.id, t]));
+
+  const results = new Map();
+  const eligible = [];
+
+  for (const id of ids) {
+    const ticket = byId.get(id);
+    if (!ticket) {
+      results.set(id, failure(id, 'NOT_FOUND', `Ticket ${id} not found`));
+    } else if (status !== undefined && !canTransition(ticket.status, status)) {
+      const allowed = allowedNext(ticket.status);
+      results.set(
+        id,
+        failure(
+          id,
+          'INVALID_STATUS_TRANSITION',
+          allowed.length
+            ? `Cannot change status from ${ticket.status} to ${status}. Allowed: ${allowed.join(', ')}`
+            : `Cannot change status from ${ticket.status}: it is a final status`
+        )
+      );
+    } else {
+      eligible.push(ticket);
+    }
+  }
+
+  if (eligible.length > 0) {
+    await prisma.$transaction(async (tx) => {
+      if (status !== undefined) {
+        // One UPDATE per starting status (at most 3), instead of one per ticket.
+        const groups = new Map();
+        for (const t of eligible) groups.set(t.status, [...(groups.get(t.status) ?? []), t.id]);
+
+        for (const [from, groupIds] of groups) {
+          const { count } = await tx.ticket.updateMany({ where: { id: { in: groupIds }, status: from }, data: { status } });
+          if (count !== groupIds.length) {
+            // Someone changed a ticket after we read it. Undo everything and let the caller retry.
+            throw AppError.conflict('STATUS_CHANGED', 'Some tickets were changed by someone else while updating. Reload and retry');
+          }
+          await tx.statusHistory.createMany({ data: groupIds.map((ticketId) => ({ ticketId, fromStatus: from, toStatus: status })) });
+        }
+      } else {
+        await tx.ticket.updateMany({ where: { id: { in: eligible.map((t) => t.id) } }, data: { assigneeId } });
+      }
+    }, TX_OPTIONS);
+    for (const t of eligible) results.set(t.id, { id: t.id, ok: true });
+  }
+
+  const ordered = ids.map((id) => results.get(id));
+  const succeeded = ordered.filter((r) => r.ok).length;
+  return { results: ordered, summary: { requested: ids.length, succeeded, failed: ids.length - succeeded } };
 }
 
 async function deleteTicket(id) {
@@ -173,6 +239,7 @@ module.exports = {
   updateTicket,
   changeStatus,
   assignTicket,
+  bulkUpdate,
   deleteTicket,
   getHistory,
 };
