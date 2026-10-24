@@ -1,4 +1,4 @@
-// Grey placeholder block shown while data loads.
+// Placeholder block shown while data loads.
 export default function Skeleton({ className = '' }) {
-  return <div className={`animate-pulse rounded bg-slate-200 ${className}`} aria-hidden="true" />;
+  return <div className={`animate-pulse rounded-md bg-surface-2 ${className}`} aria-hidden="true" />;
 }

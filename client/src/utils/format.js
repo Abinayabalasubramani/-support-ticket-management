@@ -26,5 +26,8 @@ export function formatRelative(iso) {
   return 'just now';
 }
 
-export const formatDate =(iso) => (iso ? dateFormat.format(new Date(iso)) : '—');
+const timeFormat = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit' });
+export const formatTime = (iso) => (iso ? timeFormat.format(new Date(iso)) : '');
+
+export const formatDate = (iso) => (iso ? dateFormat.format(new Date(iso)) : '—');
 export const formatDateTime = (iso) => (iso ? dateTimeFormat.format(new Date(iso)) : '—');

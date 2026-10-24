@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import {
   useAssignTicketMutation,
   useChangeStatusMutation,
@@ -8,9 +10,11 @@ import {
   useGetTicketHistoryQuery,
   useGetTicketQuery,
 } from '../api/apiSlice';
+import { openEditForm } from '../features/ui/uiSlice';
 import { getErrorMessage } from '../utils/errors';
 import { STATUS_LABELS } from '../utils/labels';
 import { formatDateTime } from '../utils/format';
+import CategoryIcon from '../utils/categoryIcons';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import EmptyState from '../components/common/EmptyState';
 import ErrorState from '../components/common/ErrorState';
@@ -21,10 +25,7 @@ import StatusBadge from '../components/common/StatusBadge';
 import { useToast } from '../components/common/Toast';
 import AssigneeSelect from '../components/tickets/AssigneeSelect';
 import StatusControl from '../components/tickets/StatusControl';
-import TicketFormModal from '../components/tickets/TicketFormModal';
 import Timeline from '../components/tickets/Timeline';
-
-const card = 'rounded-lg border border-slate-200 bg-white';
 
 function DetailSkeleton() {
   return (
@@ -39,6 +40,7 @@ function DetailSkeleton() {
 export default function TicketDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const toast = useToast();
 
   const ticketQuery = useGetTicketQuery(id);
@@ -51,7 +53,6 @@ export default function TicketDetailPage() {
 
   const [pendingStatus, setPendingStatus] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [editing, setEditing] = useState(false);
 
   const { data: ticket, isLoading, isError, error, refetch } = ticketQuery;
 
@@ -60,12 +61,12 @@ export default function TicketDetailPage() {
   // Unknown id (404) or a malformed one (400): same answer for the user.
   if (isError && [400, 404].includes(error.status)) {
     return (
-      <div className={card}>
+      <div className="card">
         <EmptyState
           title="Ticket not found"
           message={`There is no ticket #${id}. It may have been deleted.`}
           action={
-            <Link to="/tickets" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
+            <Link to="/tickets" className="btn-primary">
               Back to tickets
             </Link>
           }
@@ -76,7 +77,7 @@ export default function TicketDetailPage() {
 
   if (isError) {
     return (
-      <div className={card}>
+      <div className="card">
         <ErrorState error={error} onRetry={refetch} title="Could not load the ticket" />
       </div>
     );
@@ -118,73 +119,70 @@ export default function TicketDetailPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <Link to="/tickets" className="inline-block text-sm font-medium text-blue-600 hover:underline">
-        ← Back to tickets
+    <div className="space-y-5">
+      <Link to="/tickets" className="inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-fg">
+        <ArrowLeft className="h-4 w-4" /> Back to tickets
       </Link>
 
-      <div className={`${card} p-5 sm:p-6`}>
+      <div className="card p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-sm text-slate-400">Ticket #{ticket.id}</p>
-            <h2 className="mt-0.5 break-words text-xl font-semibold text-slate-900">{ticket.title}</h2>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-md border border-line bg-surface-2 px-2 py-1 font-mono text-xs text-fg">#{ticket.id}</span>
+            <h1 className="mt-3 break-words text-2xl font-semibold tracking-tight text-fg">{ticket.title}</h1>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
               <StatusBadge status={ticket.status} />
               <PriorityBadge priority={ticket.priority} />
-              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">{ticket.category?.name}</span>
+              <span className="inline-flex items-center gap-2 text-sm text-muted">
+                <CategoryIcon name={ticket.category?.name} />
+                {ticket.category?.name}
+              </span>
             </div>
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setEditing(true)} className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              Edit
+            <button type="button" onClick={() => dispatch(openEditForm(ticket))} className="btn-secondary">
+              <Pencil className="h-4 w-4" /> Edit
             </button>
-            <button type="button" onClick={() => setConfirmDelete(true)} className="rounded-md border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
-              Delete
+            <button type="button" onClick={() => setConfirmDelete(true)} className="btn-secondary text-red-500 hover:text-red-400">
+              <Trash2 className="h-4 w-4" /> Delete
             </button>
           </div>
         </div>
 
-        <h3 className="mt-6 text-xs font-semibold uppercase tracking-wide text-slate-500">Description</h3>
-        <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">{ticket.description}</p>
+        <h2 className="mt-6 text-xs font-semibold uppercase tracking-wide text-muted">Description</h2>
+        <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-relaxed text-fg">{ticket.description}</p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-1">
-          <section className={`${card} p-5`}>
-            <h3 className="mb-3 text-sm font-semibold text-slate-900">Status</h3>
+      <div className="grid gap-5 lg:grid-cols-3">
+        <div className="space-y-5 lg:col-span-1">
+          <section className="card p-5">
+            <h2 className="mb-3 text-sm font-semibold text-fg">Status</h2>
             <StatusControl ticket={ticket} onSelect={onSelectStatus} loading={isChangingStatus} />
           </section>
 
-          <section className={`${card} p-5`}>
-            <label htmlFor="assignee" className="mb-3 block text-sm font-semibold text-slate-900">
+          <section className="card p-5">
+            <label htmlFor="assignee" className="mb-3 block text-sm font-semibold text-fg">
               Assignee
             </label>
-            {meta ? (
-              <AssigneeSelect id="assignee" value={ticket.assigneeId} users={meta.users} disabled={isAssigning} onChange={onAssign} />
-            ) : (
-              <Skeleton className="h-9 w-full" />
-            )}
+            {meta ? <AssigneeSelect id="assignee" value={ticket.assigneeId} users={meta.users} disabled={isAssigning} onChange={onAssign} /> : <Skeleton className="h-10 w-full" />}
           </section>
 
-          <section className={`${card} p-5`}>
-            <h3 className="mb-3 text-sm font-semibold text-slate-900">Details</h3>
-            <dl className="space-y-2 text-sm">
+          <section className="card p-5">
+            <h2 className="mb-3 text-sm font-semibold text-fg">Details</h2>
+            <dl className="space-y-2.5 text-sm">
               <div className="flex justify-between gap-3">
-                <dt className="text-slate-500">Created</dt>
-                <dd className="text-right text-slate-800">{formatDateTime(ticket.createdAt)}</dd>
+                <dt className="text-muted">Created</dt>
+                <dd className="text-right text-fg">{formatDateTime(ticket.createdAt)}</dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className="text-slate-500">Last updated</dt>
-                <dd className="text-right text-slate-800">{formatDateTime(ticket.updatedAt)}</dd>
+                <dt className="text-muted">Last updated</dt>
+                <dd className="text-right text-fg">{formatDateTime(ticket.updatedAt)}</dd>
               </div>
             </dl>
           </section>
         </div>
 
-        <section className={`${card} p-5 lg:col-span-2`}>
-          <h3 className="mb-4 text-sm font-semibold text-slate-900">
-            Activity timeline{historyQuery.data ? ` (${historyQuery.data.length})` : ''}
-          </h3>
+        <section className="card p-5 lg:col-span-2">
+          <h2 className="mb-4 text-sm font-semibold text-fg">Activity timeline{historyQuery.data ? ` (${historyQuery.data.length})` : ''}</h2>
           {historyQuery.isLoading && <Spinner label="Loading activity…" />}
           {historyQuery.isError && <ErrorState error={historyQuery.error} onRetry={historyQuery.refetch} title="Could not load activity" />}
           {historyQuery.data && <Timeline entries={historyQuery.data} />}
@@ -211,8 +209,6 @@ export default function TicketDetailPage() {
         onConfirm={onDelete}
         onCancel={() => setConfirmDelete(false)}
       />
-
-      <TicketFormModal open={editing} ticket={ticket} onClose={() => setEditing(false)} />
     </div>
   );
 }

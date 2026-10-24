@@ -13,31 +13,25 @@ export const PRIORITY_LABELS = {
   CRITICAL: 'Critical',
 };
 
+// Pills: tinted background that reads on both the light and the dark theme.
 export const STATUS_STYLES = {
-  OPEN: 'bg-blue-50 text-blue-700 ring-blue-600/20',
-  IN_PROGRESS: 'bg-amber-50 text-amber-700 ring-amber-600/20',
-  RESOLVED: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
-  CLOSED: 'bg-slate-100 text-slate-600 ring-slate-500/20',
+  OPEN: 'bg-blue-500/15 text-blue-700 ring-blue-500/30 dark:text-blue-300',
+  IN_PROGRESS: 'bg-amber-500/15 text-amber-700 ring-amber-500/30 dark:text-amber-300',
+  RESOLVED: 'bg-emerald-500/15 text-emerald-700 ring-emerald-500/30 dark:text-emerald-300',
+  CLOSED: 'bg-slate-500/15 text-slate-600 ring-slate-500/30 dark:text-slate-300',
 };
 
-export const PRIORITY_STYLES = {
-  LOW: 'bg-slate-100 text-slate-600 ring-slate-500/20',
-  MEDIUM: 'bg-yellow-50 text-yellow-700 ring-yellow-600/20',
-  HIGH: 'bg-orange-50 text-orange-700 ring-orange-600/20',
-  CRITICAL: 'bg-red-50 text-red-700 ring-red-600/20',
-};
-
-// Chart colours (hex, because SVG fills can't use Tailwind classes).
+// Hex colours (SVG charts and small dots can't use Tailwind classes).
 export const STATUS_COLORS = {
-  OPEN: '#3b82f6',
-  IN_PROGRESS: '#f59e0b',
-  RESOLVED: '#10b981',
-  CLOSED: '#94a3b8',
+  OPEN: '#3d7bff',
+  IN_PROGRESS: '#f5a524',
+  RESOLVED: '#2fd3a0',
+  CLOSED: '#7f8fb8',
 };
 
 export const PRIORITY_COLORS = {
-  LOW: '#94a3b8',
-  MEDIUM: '#eab308',
-  HIGH: '#f97316',
-  CRITICAL: '#ef4444',
+  LOW: '#7f8fb8',
+  MEDIUM: '#3d7bff',
+  HIGH: '#f5a524',
+  CRITICAL: '#f0566b',
 };

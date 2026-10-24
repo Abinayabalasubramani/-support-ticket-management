@@ -1,10 +1,10 @@
-import { PRIORITY_LABELS, PRIORITY_STYLES } from '../../utils/labels';
+import { PRIORITY_COLORS, PRIORITY_LABELS } from '../../utils/labels';
 
+// A coloured dot plus the label, as in the design.
 export default function PriorityBadge({ priority }) {
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${PRIORITY_STYLES[priority] ?? ''}`}
-    >
+    <span className="inline-flex items-center gap-2 whitespace-nowrap text-sm text-fg">
+      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PRIORITY_COLORS[priority] }} aria-hidden="true" />
       {PRIORITY_LABELS[priority] ?? priority}
     </span>
   );

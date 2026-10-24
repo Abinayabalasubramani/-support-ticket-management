@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 
-// A button that opens a checklist. `selected` is an array of option values.
+// A boxed control (small label over the current value) that opens a checklist.
+// `selected` is an array of option values.
 export default function FilterDropdown({ label, options, selected, onChange }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -17,10 +19,10 @@ export default function FilterDropdown({ label, options, selected, onChange }) {
     };
   }, [open]);
 
-  const toggle = (value) =>
-    onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
+  const toggle = (value) => onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
 
   const active = selected.length > 0;
+  const summary = !active ? 'All' : selected.length === 1 ? options.find((o) => o.value === selected[0])?.label ?? '1 selected' : `${selected.length} selected`;
 
   return (
     <div className="relative" ref={ref}>
@@ -29,33 +31,28 @@ export default function FilterDropdown({ label, options, selected, onChange }) {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium ${
-          active ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+        className={`flex h-12 min-w-[9.5rem] items-center justify-between gap-3 rounded-lg border bg-surface-2 px-3.5 text-left transition-colors hover:border-primary/60 ${
+          active ? 'border-primary' : 'border-line'
         }`}
       >
-        {label}
-        {active && <span className="rounded-full bg-blue-600 px-1.5 text-xs text-white">{selected.length}</span>}
-        <svg className="h-4 w-4 opacity-60" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
-        </svg>
+        <span>
+          <span className="block text-[11px] leading-tight text-muted">{label}</span>
+          <span className="block text-sm leading-tight text-fg">{summary}</span>
+        </span>
+        <ChevronDown className={`h-4 w-4 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute left-0 z-20 mt-1 max-h-72 w-56 overflow-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg">
-          {options.length === 0 && <p className="px-3 py-2 text-sm text-slate-400">No options</p>}
+        <div className="card absolute left-0 z-30 mt-2 max-h-72 w-60 overflow-auto py-1.5">
+          {options.length === 0 && <p className="px-3 py-2 text-sm text-faint">No options</p>}
           {options.map((opt) => (
-            <label key={opt.value} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm hover:bg-slate-50">
-              <input
-                type="checkbox"
-                checked={selected.includes(opt.value)}
-                onChange={() => toggle(opt.value)}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600"
-              />
+            <label key={opt.value} className="flex cursor-pointer items-center gap-2.5 px-3.5 py-2 text-sm text-fg hover:bg-surface-2">
+              <input type="checkbox" checked={selected.includes(opt.value)} onChange={() => toggle(opt.value)} className="h-4 w-4 rounded border-line accent-[var(--primary)]" />
               {opt.label}
             </label>
           ))}
           {active && (
-            <button type="button" onClick={() => onChange([])} className="w-full border-t border-slate-100 px-3 py-2 text-left text-xs font-medium text-slate-500 hover:bg-slate-50">
+            <button type="button" onClick={() => onChange([])} className="mt-1 w-full border-t border-line px-3.5 py-2.5 text-left text-xs font-medium text-muted hover:text-fg">
               Clear {label.toLowerCase()}
             </button>
           )}

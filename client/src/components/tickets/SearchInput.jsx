@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Search } from 'lucide-react';
 
 const DELAY_MS = 400;
 
@@ -7,10 +8,10 @@ const DELAY_MS = 400;
 export default function SearchInput({ value: committed, onCommit }) {
   const [text, setText] = useState(committed);
 
-  // "Clear filters" empties the store value: clear the box too.
-  // (Other store changes come from our own commit, so don't overwrite what's being typed.)
+  // The store value changed from outside (the top-bar search, or "Clear all"): show it here.
+  // Our own commits are trimmed copies of what was typed, so they are left alone mid-typing.
   useEffect(() => {
-    if (committed === '') setText('');
+    setText((current) => (current.trim() === committed ? current : committed));
   }, [committed]);
 
   useEffect(() => {
@@ -20,19 +21,16 @@ export default function SearchInput({ value: committed, onCommit }) {
   }, [text, committed, onCommit]);
 
   return (
-    <div className="relative w-full sm:max-w-xs">
-      <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <circle cx="11" cy="11" r="7" />
-        <path strokeLinecap="round" d="m20 20-3.5-3.5" />
-      </svg>
+    <div className="relative min-w-[14rem] flex-1">
+      <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
       <input
         type="search"
         value={text}
         maxLength={100}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Search title or description"
+        placeholder="Search tickets…"
         aria-label="Search tickets"
-        className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+        className="input h-12 pl-10 [&::-webkit-search-cancel-button]:hidden"
       />
     </div>
   );

@@ -9,5 +9,6 @@ const withRange = validate({ query: analyticsQuery });
 router.get('/summary', withRange, controller.summary);
 router.get('/by-status', withRange, controller.byStatus);
 router.get('/by-priority', withRange, controller.byPriority);
+router.get('/volume', withRange, controller.volume);
 
 module.exports = router;

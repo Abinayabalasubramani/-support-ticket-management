@@ -13,4 +13,8 @@ const byPriority = asyncHandler(async (req, res) => {
   res.json(await service.getByPriority(req.query));
 });
 
-module.exports = { summary, byStatus, byPriority };
+const volume = asyncHandler(async (req, res) => {
+  res.json(await service.getVolume(req.query));
+});
+
+module.exports = { summary, byStatus, byPriority, volume };

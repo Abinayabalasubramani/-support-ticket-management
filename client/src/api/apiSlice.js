@@ -100,6 +100,11 @@ export const apiSlice = createApi({
       query: (range) => ({ url: '/analytics/by-priority', params: cleanParams(range) }),
       providesTags: ['Analytics'],
     }),
+
+    getVolume: builder.query({
+      query: (range) => ({ url: '/analytics/volume', params: cleanParams(range) }),
+      providesTags: ['Analytics'],
+    }),
   }),
 });
 
@@ -116,4 +121,5 @@ export const {
   useGetSummaryQuery,
   useGetByStatusQuery,
   useGetByPriorityQuery,
+  useGetVolumeQuery,
 } = apiSlice;

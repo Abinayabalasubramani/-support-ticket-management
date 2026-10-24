@@ -1,19 +1,16 @@
+import { TriangleAlert } from 'lucide-react';
 import { getErrorMessage } from '../../utils/errors';
 
 export default function ErrorState({ error, onRetry, title = 'Could not load data' }) {
   return (
     <div className="flex flex-col items-center justify-center px-4 py-14 text-center" role="alert">
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-xl font-bold text-red-500">
-        !
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/15 text-red-500">
+        <TriangleAlert className="h-6 w-6" />
       </div>
-      <h3 className="text-base font-semibold text-slate-800">{title}</h3>
-      <p className="mt-1 max-w-md text-sm text-slate-500">{getErrorMessage(error)}</p>
+      <h3 className="text-base font-semibold text-fg">{title}</h3>
+      <p className="mt-1 max-w-md text-sm text-muted">{getErrorMessage(error)}</p>
       {onRetry && (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="mt-4 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
-        >
+        <button type="button" onClick={onRetry} className="btn-primary mt-4">
           Retry
         </button>
       )}

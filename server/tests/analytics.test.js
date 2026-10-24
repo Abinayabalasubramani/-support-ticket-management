@@ -16,7 +16,7 @@ describe('with fixture data', () => {
   test('summary counts come from the database', async () => {
     const res = await get('/api/analytics/summary');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ total: 10, open: 4, resolved: 2, critical: 2 });
+    expect(res.body).toEqual({ total: 10, open: 4, resolved: 2, critical: 2, criticalUnresolved: 2 });
   });
 
   test('by-status lists every status in workflow order', async () => {
@@ -39,7 +39,7 @@ describe('with fixture data', () => {
   describe('date range (on creation date)', () => {
     test('from: includes that day and later', async () => {
       const res = await get('/api/analytics/summary?from=2026-01-07'); // t6..t10
-      expect(res.body).toEqual({ total: 5, open: 2, resolved: 1, critical: 1 });
+      expect(res.body).toEqual({ total: 5, open: 2, resolved: 1, critical: 1, criticalUnresolved: 1 });
     });
 
     test('to: includes the whole of that day', async () => {
@@ -49,7 +49,7 @@ describe('with fixture data', () => {
 
     test('from = to covers exactly one day', async () => {
       const res = await get('/api/analytics/summary?from=2026-01-03&to=2026-01-03'); // t2
-      expect(res.body).toEqual({ total: 1, open: 1, resolved: 0, critical: 1 });
+      expect(res.body).toEqual({ total: 1, open: 1, resolved: 0, critical: 1, criticalUnresolved: 1 });
     });
 
     test('by-status honours the range', async () => {
@@ -64,7 +64,7 @@ describe('with fixture data', () => {
 
     test('a range with no tickets gives zeros, and charts still list every category', async () => {
       const summary = await get('/api/analytics/summary?from=2030-01-01');
-      expect(summary.body).toEqual({ total: 0, open: 0, resolved: 0, critical: 0 });
+      expect(summary.body).toEqual({ total: 0, open: 0, resolved: 0, critical: 0, criticalUnresolved: 0 });
       const byStatus = await get('/api/analytics/by-status?from=2030-01-01');
       expect(byStatus.body).toHaveLength(4);
       expect(byStatus.body.every((r) => r.count === 0)).toBe(true);
@@ -86,7 +86,7 @@ describe('with fixture data', () => {
       ['bare number', 'from=5'],
       ['impossible date', 'to=2026-13-45'],
     ])('%s -> 400', async (name, query) => {
-      for (const endpoint of ['summary', 'by-status', 'by-priority']) {
+      for (const endpoint of ['summary', 'by-status', 'by-priority', 'volume']) {
         const res = await get(`/api/analytics/${endpoint}?${query}`);
         expect(res.status).toBe(400);
         expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -95,12 +95,77 @@ describe('with fixture data', () => {
   });
 });
 
+describe('volume (new tickets per day)', () => {
+  const sum = (rows) => rows.reduce((total, r) => total + r.count, 0);
+  const today = () => new Date().toISOString().slice(0, 10);
+
+  beforeAll(async () => {
+    await seedListFixtures(); // one ticket on each of 2026-01-02 .. 2026-01-11
+  });
+
+  test('has one entry per day in the range, zeros included, oldest first', async () => {
+    const res = await get('/api/analytics/volume?from=2026-01-01&to=2026-01-12');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(12);
+    expect(res.body[0]).toEqual({ date: '2026-01-01', count: 0 });
+    expect(res.body[1]).toEqual({ date: '2026-01-02', count: 1 });
+    expect(res.body[10]).toEqual({ date: '2026-01-11', count: 1 });
+    expect(res.body[11]).toEqual({ date: '2026-01-12', count: 0 });
+    expect(sum(res.body)).toBe(10);
+  });
+
+  test('a narrow range returns only those days', async () => {
+    const res = await get('/api/analytics/volume?from=2026-01-05&to=2026-01-07');
+    expect(res.body).toEqual([
+      { date: '2026-01-05', count: 1 },
+      { date: '2026-01-06', count: 1 },
+      { date: '2026-01-07', count: 1 },
+    ]);
+  });
+
+  test('multiple tickets on one day are added together', async () => {
+    const { makeTicket } = require('./helpers/db');
+    const category = await prisma.category.findFirst();
+    await makeTicket({ categoryId: category.id, createdAt: new Date('2026-01-05T20:00:00Z') });
+    const res = await get('/api/analytics/volume?from=2026-01-05&to=2026-01-05');
+    expect(res.body).toEqual([{ date: '2026-01-05', count: 2 }]);
+  });
+
+  test('without a range it starts at the first ticket and ends today', async () => {
+    const res = await get('/api/analytics/volume');
+    expect(res.body[0].date).toBe('2026-01-02');
+    expect(res.body[res.body.length - 1].date).toBe(today());
+    expect(sum(res.body)).toBe(11); // 10 fixtures + the one added above
+  });
+
+  test('a range with no tickets still lists every day with 0', async () => {
+    const res = await get('/api/analytics/volume?from=2030-01-01&to=2030-01-03');
+    expect(res.body).toEqual([
+      { date: '2030-01-01', count: 0 },
+      { date: '2030-01-02', count: 0 },
+      { date: '2030-01-03', count: 0 },
+    ]);
+  });
+
+  test('very long ranges are capped at 366 days, keeping the most recent', async () => {
+    const res = await get('/api/analytics/volume?from=2000-01-01&to=2026-01-12');
+    expect(res.body).toHaveLength(366);
+    expect(res.body[res.body.length - 1].date).toBe('2026-01-12');
+  });
+});
+
 describe('with an empty database', () => {
   beforeAll(resetDb);
 
   test('summary is all zeros', async () => {
     const res = await get('/api/analytics/summary');
-    expect(res.body).toEqual({ total: 0, open: 0, resolved: 0, critical: 0 });
+    expect(res.body).toEqual({ total: 0, open: 0, resolved: 0, critical: 0, criticalUnresolved: 0 });
+  });
+
+  test('volume without a range is empty', async () => {
+    const res = await get('/api/analytics/volume');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
   });
 
   test('charts still list every status and priority', async () => {

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { ArrowUpDown, Ticket } from 'lucide-react';
 import { useDeleteTicketMutation, useGetTicketsQuery } from '../api/apiSlice';
 import { resetFilters, selectFilters, selectHasActiveFilters, setLimit, setPage, setSort } from '../features/filters/filtersSlice';
+import { openEditForm } from '../features/ui/uiSlice';
 import { getErrorMessage } from '../utils/errors';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import EmptyState from '../components/common/EmptyState';
@@ -10,8 +12,18 @@ import Pagination from '../components/common/Pagination';
 import { useToast } from '../components/common/Toast';
 import FilterBar from '../components/tickets/FilterBar';
 import TableSkeleton from '../components/tickets/TableSkeleton';
-import TicketFormModal from '../components/tickets/TicketFormModal';
 import TicketTable from '../components/tickets/TicketTable';
+
+const SORT_OPTIONS = [
+  { value: 'createdAt:desc', label: 'Created (Newest)' },
+  { value: 'createdAt:asc', label: 'Created (Oldest)' },
+  { value: 'priority:desc', label: 'Priority (High first)' },
+  { value: 'priority:asc', label: 'Priority (Low first)' },
+  { value: 'status:asc', label: 'Status (Open first)' },
+  { value: 'status:desc', label: 'Status (Closed first)' },
+  { value: 'title:asc', label: 'Title (A–Z)' },
+  { value: 'title:desc', label: 'Title (Z–A)' },
+];
 
 export default function TicketsPage() {
   const dispatch = useDispatch();
@@ -22,8 +34,6 @@ export default function TicketsPage() {
   const { data, isLoading, isFetching, isError, error, refetch } = useGetTicketsQuery(filters);
   const [deleteTicket, { isLoading: isDeleting }] = useDeleteTicketMutation();
   const [pendingDelete, setPendingDelete] = useState(null);
-  // { ticket: null } = create form, { ticket } = edit form, null = closed
-  const [form, setForm] = useState(null);
 
   // After deleting the last row of the last page, the current page no longer exists: step back.
   useEffect(() => {
@@ -35,6 +45,11 @@ export default function TicketsPage() {
   const onSort = (key) => {
     const sameColumn = filters.sortBy === key;
     dispatch(setSort({ sortBy: key, order: sameColumn && filters.order === 'asc' ? 'desc' : 'asc' }));
+  };
+
+  const onSortSelect = (e) => {
+    const [sortBy, order] = e.target.value.split(':');
+    dispatch(setSort({ sortBy, order }));
   };
 
   const confirmDelete = async () => {
@@ -52,21 +67,39 @@ export default function TicketsPage() {
   const total = data?.meta.total;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-500">{total === undefined ? ' ' : `${total} ticket${total === 1 ? '' : 's'}`}</p>
-        <button
-          type="button"
-          onClick={() => setForm({ ticket: null })}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          + New ticket
-        </button>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-soft text-primary">
+            <Ticket className="h-6 w-6" />
+          </span>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-fg">Tickets</h1>
+            <p className="text-sm text-muted">Manage and track all support tickets in one place.</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <p className="card px-4 py-2.5 text-sm text-muted" aria-live="polite">
+            <span className="text-lg font-semibold text-fg">{total ?? '–'}</span> ticket{total === 1 ? '' : 's'}
+          </p>
+          <label className="card flex items-center gap-2 px-3.5 py-2.5 text-sm">
+            <ArrowUpDown className="h-4 w-4 text-muted" aria-hidden="true" />
+            <span className="hidden text-muted sm:inline">Sort by:</span>
+            <select value={`${filters.sortBy}:${filters.order}`} onChange={onSortSelect} aria-label="Sort tickets" className="cursor-pointer bg-transparent font-medium text-fg focus:outline-none">
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value} className="bg-surface-solid text-fg">
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <FilterBar />
+      <FilterBar />
 
+      <div className="card overflow-hidden">
         {isLoading && <TableSkeleton />}
 
         {isError && !data && <ErrorState error={error} onRetry={refetch} title="Could not load tickets" />}
@@ -74,18 +107,10 @@ export default function TicketsPage() {
         {data && total === 0 && (
           <EmptyState
             title={hasActiveFilters ? 'No tickets match your filters' : 'No tickets yet'}
-            message={
-              hasActiveFilters
-                ? 'Try removing a filter or searching for something else.'
-                : 'Create the first ticket with the "New ticket" button.'
-            }
+            message={hasActiveFilters ? 'Try removing a filter or searching for something else.' : 'Create the first ticket with the "Create ticket" button.'}
             action={
               hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={() => dispatch(resetFilters())}
-                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
-                >
+                <button type="button" onClick={() => dispatch(resetFilters())} className="btn-primary">
                   Clear filters
                 </button>
               )
@@ -100,16 +125,11 @@ export default function TicketsPage() {
               sortBy={filters.sortBy}
               order={filters.order}
               onSort={onSort}
-              onEdit={(ticket) => setForm({ ticket })}
+              onEdit={(ticket) => dispatch(openEditForm(ticket))}
               onDelete={setPendingDelete}
               dimmed={isFetching}
             />
-            <Pagination
-              {...data.meta}
-              disabled={isFetching}
-              onPageChange={(p) => dispatch(setPage(p))}
-              onLimitChange={(n) => dispatch(setLimit(n))}
-            />
+            <Pagination {...data.meta} disabled={isFetching} onPageChange={(p) => dispatch(setPage(p))} onLimitChange={(n) => dispatch(setLimit(n))} />
           </>
         )}
       </div>
@@ -124,8 +144,6 @@ export default function TicketsPage() {
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
       />
-
-      <TicketFormModal open={Boolean(form)} ticket={form?.ticket ?? null} onClose={() => setForm(null)} />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { RotateCcw } from 'lucide-react';
 import { useGetMetaQuery } from '../../api/apiSlice';
 import { resetFilters, selectFilters, selectHasActiveFilters, setFilter, setSearch } from '../../features/filters/filtersSlice';
 import { PRIORITY_LABELS, STATUS_LABELS } from '../../utils/labels';
@@ -29,19 +30,21 @@ export default function FilterBar() {
   );
 
   return (
-    <div className="flex flex-col gap-3 border-b border-slate-200 p-4 lg:flex-row lg:items-center">
+    <div className="card flex flex-wrap items-center gap-3 p-4">
       <SearchInput value={filters.search} onCommit={onSearch} />
-      <div className="flex flex-wrap items-center gap-2">
-        <FilterDropdown label="Status" options={options.status} selected={filters.status} onChange={set('status')} />
-        <FilterDropdown label="Priority" options={options.priority} selected={filters.priority} onChange={set('priority')} />
-        <FilterDropdown label="Category" options={options.category} selected={filters.category} onChange={set('category')} />
-        <FilterDropdown label="Assignee" options={options.assignee} selected={filters.assignee} onChange={set('assignee')} />
-        {hasActive && (
-          <button type="button" onClick={() => dispatch(resetFilters())} className="px-2 py-2 text-sm font-medium text-blue-600 hover:underline">
-            Clear filters
-          </button>
-        )}
-      </div>
+      <FilterDropdown label="Status" options={options.status} selected={filters.status} onChange={set('status')} />
+      <FilterDropdown label="Priority" options={options.priority} selected={filters.priority} onChange={set('priority')} />
+      <FilterDropdown label="Category" options={options.category} selected={filters.category} onChange={set('category')} />
+      <FilterDropdown label="Assignee" options={options.assignee} selected={filters.assignee} onChange={set('assignee')} />
+      <button
+        type="button"
+        onClick={() => dispatch(resetFilters())}
+        disabled={!hasActive}
+        className="inline-flex h-12 items-center gap-2 rounded-lg px-3 text-sm font-medium text-muted transition-colors hover:text-fg disabled:cursor-default disabled:opacity-40"
+      >
+        <RotateCcw className="h-4 w-4" />
+        Clear all
+      </button>
     </div>
   );
 }

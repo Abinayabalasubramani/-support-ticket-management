@@ -11,7 +11,7 @@ const initialState = {
   sortBy: 'createdAt',
   order: 'desc',
   page: 1,
-  limit: 10,
+  limit: 8,
 };
 
 const filtersSlice = createSlice({

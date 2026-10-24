@@ -1,5 +1,124 @@
 @import 'tailwindcss';
 
+/* Dark mode is controlled by a `.dark` class on <html> (set by the theme button),
+   not by the operating-system setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens. Every colour used by the UI comes from these variables,
+   so a theme is just a different set of values. Surfaces are translucent
+   (see .card) so the page gradient shows through the blur: the "glass" look. */
+/* Light theme: lavender, pink and white, with glass panels over soft colour washes. */
+:root {
+  --app: #e9e3fa;
+  --page-bg:
+    radial-gradient(820px 560px at 92% -6%, rgba(255, 160, 214, 0.55), transparent 62%),
+    radial-gradient(860px 640px at -4% 102%, rgba(168, 146, 255, 0.55), transparent 62%),
+    radial-gradient(640px 440px at 52% 30%, rgba(255, 255, 255, 0.7), transparent 72%),
+    linear-gradient(135deg, #efe9fd 0%, #e4defa 48%, #f7e6f5 100%);
+  --sidebar: rgba(255, 255, 255, 0.42);
+  --surface: rgba(255, 255, 255, 0.5);
+  --surface-solid: #faf7ff;
+  --surface-2: rgba(236, 228, 255, 0.62);
+  --line: rgba(139, 112, 214, 0.26);
+  --fg: #251b4d;
+  --muted: #62598c;
+  --faint: #978fb9;
+  --primary: #6a4ff0;
+  --primary-soft: rgba(106, 79, 240, 0.14);
+  --brand-gradient: linear-gradient(135deg, #6a5cf6, #a468f6);
+  --brand-glow: rgba(130, 90, 245, 0.35);
+  --highlight: rgba(255, 255, 255, 0.95);
+  --shadow: 0 14px 38px rgba(112, 80, 200, 0.16);
+  --overlay: rgba(52, 30, 104, 0.38);
+  color-scheme: light;
+}
+
+.dark {
+  --app: #040a1f;
+  --page-bg:
+    radial-gradient(950px 560px at 90% -10%, rgba(61, 123, 255, 0.3), transparent 62%),
+    radial-gradient(720px 620px at 0% 100%, rgba(40, 90, 255, 0.22), transparent 62%),
+    radial-gradient(560px 420px at 48% 36%, rgba(96, 70, 230, 0.12), transparent 70%);
+  --sidebar: rgba(6, 15, 42, 0.7);
+  --surface: rgba(14, 30, 78, 0.48);
+  --surface-solid: #0a1737;
+  --surface-2: rgba(40, 70, 150, 0.26);
+  --line: rgba(120, 160, 255, 0.18);
+  --fg: #e8eeff;
+  --muted: #8da2d6;
+  --faint: #5d71a0;
+  --primary: #3d7bff;
+  --primary-soft: rgba(61, 123, 255, 0.18);
+  --brand-gradient: linear-gradient(135deg, #2c63ff, #3a8bff);
+  --brand-glow: rgba(52, 110, 255, 0.32);
+  --highlight: rgba(160, 190, 255, 0.1);
+  --shadow: 0 14px 40px rgba(0, 0, 0, 0.38);
+  --overlay: rgba(2, 6, 20, 0.7);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --color-app: var(--app);
+  --color-sidebar: var(--sidebar);
+  --color-surface: var(--surface);
+  --color-surface-solid: var(--surface-solid);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+}
+
 body {
-  @apply bg-slate-50 text-slate-800 antialiased;
+  @apply bg-app font-sans text-fg antialiased;
+  background-image: var(--page-bg);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* Reusable building blocks. Declared with @utility so other classes can @apply them. */
+
+/* Glass panel: translucent fill + blur + a faint top highlight. */
+@utility card {
+  @apply rounded-2xl border border-line;
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--shadow);
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility btn-primary {
+  @apply btn text-white;
+  background-image: var(--brand-gradient);
+  box-shadow: 0 6px 18px var(--brand-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  &:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+}
+
+@utility btn-secondary {
+  @apply btn border border-line bg-surface-2 text-fg hover:bg-primary-soft;
+}
+
+@utility btn-danger {
+  @apply btn bg-red-600 text-white hover:bg-red-700;
+}
+
+@utility btn-icon {
+  @apply inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-surface-2 text-muted transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
+}
+
+@utility input {
+  @apply w-full rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-sm text-fg placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25;
+}
+
+@utility input-error {
+  @apply border-red-400 focus:border-red-500 focus:ring-red-500/25;
 }

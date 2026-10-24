@@ -1,9 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Support Desk</title>
+    <meta name="theme-color" content="#040a1f" />
+    <title>TicketFlow</title>
+    <!-- Apply the saved theme before the first paint so the page never flashes the wrong colours. -->
+    <script>
+      try {
+        var saved = localStorage.getItem('theme');
+        document.documentElement.classList.toggle('dark', saved !== 'light');
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
