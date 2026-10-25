@@ -7,7 +7,7 @@ A full-stack support desk: agents create, assign and work on tickets, search and
 | **Live app** | https://support-ticket-management-woad.vercel.app |
 | **API** | https://support-ticket-api-cdns.onrender.com (health check: `/health`) |
 | **Repository** | https://github.com/Abinayabalasubramani/-support-ticket-management |
-| **Demo video** | _add the Google Drive link here_ |
+| **Demo video** | https://drive.google.com/file/d/1E_EmFyTjXN6Kqbtnym89Z0bYBdxEQDpk/view?usp=sharing |
 
 **Demo sign-in** (password for both: `Demo@12345`)
 
