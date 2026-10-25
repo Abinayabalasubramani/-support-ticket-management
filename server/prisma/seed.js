@@ -158,6 +158,16 @@ const CATALOG = {
 };
 
 const PRIORITY_ORDER = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+
+// Priorities follow the kind of ticket: outages and billing mistakes are urgent, questions and
+// feature requests are not. Weights are [priority, weight] pairs.
+const PRIORITY_WEIGHTS = {
+  Billing: [['LOW', 15], ['MEDIUM', 40], ['HIGH', 35], ['CRITICAL', 10]],
+  Technical: [['LOW', 8], ['MEDIUM', 32], ['HIGH', 38], ['CRITICAL', 22]],
+  Account: [['LOW', 12], ['MEDIUM', 38], ['HIGH', 35], ['CRITICAL', 15]],
+  'Feature Request': [['LOW', 55], ['MEDIUM', 40], ['HIGH', 5]],
+  General: [['LOW', 60], ['MEDIUM', 35], ['HIGH', 5]],
+};
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
 const SPAN_DAYS = 45;
@@ -233,7 +243,7 @@ async function main() {
 
   for (const draft of drafts) {
     const status = pickStatus(draft.ageDays);
-    const priority = weighted([['LOW', 20], ['MEDIUM', 40], ['HIGH', 28], ['CRITICAL', 12]]);
+    const priority = weighted(PRIORITY_WEIGHTS[draft.categoryName]);
     const unassigned = rand() < (status === 'OPEN' ? 0.35 : 0.05);
     const assignee = unassigned ? null : pick(users);
 
