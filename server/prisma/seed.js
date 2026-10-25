@@ -42,31 +42,31 @@ const USERS = [
 
 // category -> { how many tickets, unique titles (at least that many), descriptions }
 const CATALOG = {
-  Billing: {
+  'Change Request': {
     count: 14,
     titles: [
-      'Charged twice for the same invoice',
-      'Refund not received after cancellation',
-      'Invoice shows wrong company name',
-      'Unable to update payment method',
-      'Unexpected increase in monthly charge',
-      'Request for GST invoice copy',
-      'Coupon code not applied at checkout',
-      'Subscription renewed after cancelling',
-      'Card declined although funds are available',
-      'Need to change billing email address',
-      'Annual plan price differs from the quote',
-      'Receipt missing for last month',
-      'Prorated charge looks incorrect after upgrade',
-      'Tax number not appearing on invoice',
+      'Change the billing email address',
+      'Update the company name on invoices',
+      'Switch the plan from monthly to annual',
+      'Transfer account ownership to a new admin',
+      'Change the workspace timezone',
+      'Rename the workspace',
+      'Update the tax number on invoices',
+      'Change the notification email for reports',
+      'Update the billing address',
+      'Change the default ticket priority',
+      'Move the workspace to a different region',
+      'Replace the payment method on file',
+      'Update the company logo on invoices',
+      'Change the account email address',
     ],
     descriptions: [
-      'The customer sent a screenshot of the statement and asks for a correction.',
-      'Billing shows a different amount than the plan page. Finance needs to confirm.',
-      'Customer is on the business plan and needs the corrected document for accounting.',
+      'Request came from the workspace owner. Please confirm before making the change.',
+      'The customer asked for this change to be applied before the next billing cycle.',
+      'Needs approval from the account owner. Impact on existing data has been checked.',
     ],
   },
-  Technical: {
+  Bug: {
     count: 22,
     titles: [
       'Dashboard fails to load after login',
@@ -99,30 +99,32 @@ const CATALOG = {
       'Needs investigation by the platform team before we can give the customer a timeline.',
     ],
   },
-  Account: {
-    count: 12,
+  Task: {
+    count: 14,
     titles: [
-      'Cannot reset password',
-      'Locked out after too many login attempts',
-      'Need to change the account email address',
       'Add a new team member to the workspace',
-      'Two-factor code not arriving',
-      'Request to delete my account',
-      'Transfer account ownership',
-      'Profile picture will not upload',
-      'Invite link says it has expired',
       'Remove a former employee from the workspace',
-      'Single sign-on button does nothing',
-      'Wrong name shown on the profile',
+      'Reset the password for a locked-out user',
+      'Send the GST invoice copy to the customer',
+      'Process the refund for a cancelled subscription',
+      'Schedule a product demo for the customer team',
+      'Share the user guide with a new customer',
+      'Verify identity for account recovery',
+      'Export customer data on request',
+      'Delete an account on the customer request',
+      'Prepare the monthly uptime report',
+      'Follow up on an unpaid invoice',
+      'Update the onboarding checklist',
+      'Review the data retention request',
     ],
     descriptions: [
-      'The customer verified their identity by email and needs access restored today.',
-      'Request came from the workspace owner. Please confirm before making the change.',
+      'The customer verified their identity by email and needs this done today.',
+      'Routine request. Follow the standard checklist and confirm with the customer.',
       'Customer has tried the self-service steps without success.',
     ],
   },
-  'Feature Request': {
-    count: 8,
+  Story: {
+    count: 14,
     titles: [
       'Add dark mode to the dashboard',
       'Allow scheduling of recurring reports',
@@ -132,41 +134,29 @@ const CATALOG = {
       'Option to bulk edit custom fields',
       'Let customers attach files to replies',
       'Show a satisfaction survey after resolution',
+      'Add saved filters to the ticket list',
+      'Let users pin their favourite reports',
+      'Add reply templates for common questions',
+      'Show an SLA countdown on each ticket',
+      'Support multiple languages in the portal',
+      'Add an activity feed to the dashboard',
     ],
     descriptions: [
       'Requested by several customers. Product team asked for votes and use cases.',
       'Would save the customer a few hours every week. Logged for the next planning session.',
     ],
   },
-  General: {
-    count: 8,
-    titles: [
-      'Question about data retention policy',
-      'How do I invite external collaborators?',
-      'Feedback on the new onboarding flow',
-      'Where can I find the user guide?',
-      'Request a product demo for my team',
-      'Clarification on service uptime commitments',
-      'Do you offer a discount for non-profits?',
-      'Where are my exported files stored?',
-    ],
-    descriptions: [
-      'General question. A link to the documentation is usually enough.',
-      'Customer is evaluating the product and wants a quick answer.',
-    ],
-  },
 };
 
 const PRIORITY_ORDER = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
-// Priorities follow the kind of ticket: outages and billing mistakes are urgent, questions and
-// feature requests are not. Weights are [priority, weight] pairs.
+// Priorities follow the kind of ticket: bugs are urgent, stories are not.
+// Weights are [priority, weight] pairs.
 const PRIORITY_WEIGHTS = {
-  Billing: [['LOW', 15], ['MEDIUM', 40], ['HIGH', 35], ['CRITICAL', 10]],
-  Technical: [['LOW', 8], ['MEDIUM', 32], ['HIGH', 38], ['CRITICAL', 22]],
-  Account: [['LOW', 12], ['MEDIUM', 38], ['HIGH', 35], ['CRITICAL', 15]],
-  'Feature Request': [['LOW', 55], ['MEDIUM', 40], ['HIGH', 5]],
-  General: [['LOW', 60], ['MEDIUM', 35], ['HIGH', 5]],
+  'Change Request': [['LOW', 15], ['MEDIUM', 40], ['HIGH', 35], ['CRITICAL', 10]],
+  Bug: [['LOW', 8], ['MEDIUM', 32], ['HIGH', 38], ['CRITICAL', 22]],
+  Task: [['LOW', 20], ['MEDIUM', 45], ['HIGH', 30], ['CRITICAL', 5]],
+  Story: [['LOW', 55], ['MEDIUM', 40], ['HIGH', 5]],
 };
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;

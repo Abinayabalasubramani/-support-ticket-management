@@ -101,7 +101,7 @@ export default function TicketDetailPage() {
     }
   };
 
-  // Closing is final, so ask first. Other moves are reversible and apply immediately.
+  // Closing ends the work, so ask first. Other moves apply immediately.
   const onSelectStatus = (status) => (status === 'CLOSED' ? setPendingStatus(status) : runStatusChange(status));
 
   const onAssign = async (assigneeId) => {
@@ -216,7 +216,7 @@ export default function TicketDetailPage() {
         open={pendingStatus === 'CLOSED'}
         loading={isChangingStatus}
         title="Close this ticket?"
-        message="Closed is a final status. The ticket cannot be reopened or changed to another status afterwards."
+        message="A closed ticket can only be reopened (back to Open). Close it once the work is completely done."
         confirmLabel="Close ticket"
         onConfirm={() => runStatusChange('CLOSED')}
         onCancel={() => setPendingStatus(null)}

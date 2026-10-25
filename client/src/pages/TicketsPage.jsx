@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ArrowUpDown, Ticket } from 'lucide-react';
-import { useBulkUpdateMutation, useDeleteTicketMutation, useGetMetaQuery, useGetTicketsQuery } from '../api/apiSlice';
+import { useBulkUpdateMutation, useChangeStatusMutation, useDeleteTicketMutation, useGetMetaQuery, useGetTicketsQuery } from '../api/apiSlice';
 import { resetFilters, selectFilters, selectHasActiveFilters, setLimit, setPage, setSort } from '../features/filters/filtersSlice';
 import { selectIsAdmin } from '../features/auth/authSlice';
 import { openEditForm } from '../features/ui/uiSlice';
@@ -43,11 +43,14 @@ export default function TicketsPage() {
   const { data: meta } = useGetMetaQuery();
   const [deleteTicket, { isLoading: isDeleting }] = useDeleteTicketMutation();
   const [bulkUpdate, { isLoading: isBulkUpdating }] = useBulkUpdateMutation();
+  const [changeStatus] = useChangeStatusMutation();
 
   const [pendingDelete, setPendingDelete] = useState(null);
   const [selected, setSelected] = useState(() => new Set());
   const [pendingBulk, setPendingBulk] = useState(null); // { status } or { assigneeId }
   const [bulkResult, setBulkResult] = useState(null);
+  const [pendingStatus, setPendingStatus] = useState(null); // { ticket, status } waiting for confirmation
+  const [busyStatusId, setBusyStatusId] = useState(null);
 
   // After deleting the last row of the last page, the current page no longer exists: step back.
   useEffect(() => {
@@ -105,16 +108,21 @@ export default function TicketsPage() {
     const ids = [...selected];
     try {
       const result = await bulkUpdate({ ids, ...pendingBulk }).unwrap();
-      const { succeeded, failed } = result.summary;
+      const { succeeded } = result.summary;
 
-      if (failed === 0) {
-        toast.success(`${plural(succeeded, 'ticket')} updated`);
+      // Tickets already in the chosen status are not a problem: just say so, don't raise an error.
+      const already = result.results.filter((r) => r.code === 'ALREADY_IN_STATUS').length;
+      const skipped = result.results.filter((r) => !r.ok && r.code !== 'ALREADY_IN_STATUS');
+      const note = already > 0 ? `${already} already ${STATUS_LABELS[pendingBulk.status]}` : '';
+
+      if (skipped.length === 0) {
+        toast.success([succeeded > 0 ? `${plural(succeeded, 'ticket')} updated` : '', note].filter(Boolean).join(', '));
         setSelected(new Set());
       } else {
         // Keep only the skipped tickets selected so the user can see and fix them.
-        toast.success(`${succeeded} updated, ${failed} skipped`);
-        setSelected(new Set(result.results.filter((r) => !r.ok).map((r) => r.id)));
-        setBulkResult(result);
+        toast.success([`${succeeded} updated`, note, `${skipped.length} skipped`].filter(Boolean).join(', '));
+        setSelected(new Set(skipped.map((r) => r.id)));
+        setBulkResult({ ...result, results: skipped });
       }
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -122,6 +130,23 @@ export default function TicketsPage() {
       setPendingBulk(null);
     }
   };
+
+  const runStatusChange = async (ticket, status) => {
+    setBusyStatusId(ticket.id);
+    try {
+      await changeStatus({ id: ticket.id, status }).unwrap();
+      toast.success(`Ticket #${ticket.id} moved to ${STATUS_LABELS[status]}`);
+    } catch (err) {
+      // e.g. 409 when someone else changed it first; the list refetches so the menu updates.
+      toast.error(getErrorMessage(err));
+    } finally {
+      setBusyStatusId(null);
+      setPendingStatus(null);
+    }
+  };
+
+  // Closing ends the work, so ask first. Other moves apply immediately.
+  const onChangeStatus = (ticket, status) => (status === 'CLOSED' ? setPendingStatus({ ticket, status }) : runStatusChange(ticket, status));
 
   const assigneeName = (id) => meta?.users.find((u) => u.id === id)?.name;
   const bulkMessage = () => {
@@ -210,6 +235,8 @@ export default function TicketsPage() {
               onSort={onSort}
               onEdit={(ticket) => dispatch(openEditForm(ticket))}
               onDelete={isAdmin ? setPendingDelete : undefined}
+              onChangeStatus={onChangeStatus}
+              busyStatusId={busyStatusId}
               dimmed={isFetching}
             />
             <Pagination {...data.meta} disabled={isFetching} onPageChange={(p) => dispatch(setPage(p))} onLimitChange={(n) => dispatch(setLimit(n))} />
@@ -226,6 +253,16 @@ export default function TicketsPage() {
         confirmLabel="Delete"
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(pendingStatus)}
+        loading={busyStatusId !== null}
+        title="Close this ticket?"
+        message={pendingStatus ? `"${pendingStatus.ticket.title}" will be closed. A closed ticket can only be reopened (back to Open).` : ''}
+        confirmLabel="Close ticket"
+        onConfirm={() => runStatusChange(pendingStatus.ticket, pendingStatus.status)}
+        onCancel={() => setPendingStatus(null)}
       />
 
       <ConfirmDialog

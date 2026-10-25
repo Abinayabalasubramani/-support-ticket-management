@@ -3,10 +3,10 @@ import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import Avatar from '../common/Avatar';
 import Checkbox from '../common/Checkbox';
 import PriorityBadge from '../common/PriorityBadge';
-import StatusBadge from '../common/StatusBadge';
 import CategoryIcon from '../../utils/categoryIcons';
 import { formatDate, formatTime } from '../../utils/format';
 import RowMenu from './RowMenu';
+import StatusMenu from './StatusMenu';
 
 const COLUMNS = [
   { key: 'id', label: 'ID', sortable: false },
@@ -42,7 +42,7 @@ function SortHeader({ column, sortBy, order, onSort }) {
   );
 }
 
-export default function TicketTable({ tickets, selectedIds, onToggle, onTogglePage, sortBy, order, onSort, onEdit, onDelete, dimmed }) {
+export default function TicketTable({ tickets, selectedIds, onToggle, onTogglePage, sortBy, order, onSort, onEdit, onDelete, onChangeStatus, busyStatusId, dimmed }) {
   const selectedOnPage = tickets.filter((t) => selectedIds.has(t.id)).length;
   const allSelected = tickets.length > 0 && selectedOnPage === tickets.length;
 
@@ -87,7 +87,7 @@ export default function TicketTable({ tickets, selectedIds, onToggle, onTogglePa
                 <PriorityBadge priority={t.priority} />
               </td>
               <td className="px-4 py-4">
-                <StatusBadge status={t.status} />
+                <StatusMenu ticket={t} onChange={onChangeStatus} busy={busyStatusId === t.id} />
               </td>
               <td className="whitespace-nowrap px-4 py-4">
                 <span className="inline-flex items-center gap-2.5 text-sm text-fg">

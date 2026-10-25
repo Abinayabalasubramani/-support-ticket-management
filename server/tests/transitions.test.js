@@ -30,7 +30,7 @@ const CASES = [
   ['RESOLVED', 'IN_PROGRESS', true],
   ['RESOLVED', 'OPEN', false],
   ['RESOLVED', 'RESOLVED', false],
-  ['CLOSED', 'OPEN', false],
+  ['CLOSED', 'OPEN', true], // reopen
   ['CLOSED', 'IN_PROGRESS', false],
   ['CLOSED', 'RESOLVED', false],
   ['CLOSED', 'CLOSED', false],
@@ -68,11 +68,19 @@ describe('status change behaviour', () => {
     expect(res.body.error.message).toMatch(/RESOLVED/);
   });
 
-  test('a CLOSED ticket reports that it is final', async () => {
+  test('a CLOSED ticket can only be reopened, and the error says so', async () => {
+    const ticket = await newTicket('CLOSED');
+    const res = await changeStatus(ticket.id, 'RESOLVED');
+    expect(res.status).toBe(409);
+    expect(res.body.error.message).toMatch(/Allowed: OPEN/);
+  });
+
+  test('reopening a CLOSED ticket records the move and offers the normal moves again', async () => {
     const ticket = await newTicket('CLOSED');
     const res = await changeStatus(ticket.id, 'OPEN');
-    expect(res.status).toBe(409);
-    expect(res.body.error.message).toMatch(/final/i);
+    expect(res.status).toBe(200);
+    expect(res.body.allowedTransitions).toEqual(['IN_PROGRESS', 'RESOLVED']);
+    expect((await historyRows(ticket.id)).pop()).toMatchObject({ fromStatus: 'CLOSED', toStatus: 'OPEN' });
   });
 
   test('response includes allowedTransitions for the new status', async () => {

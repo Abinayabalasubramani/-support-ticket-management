@@ -79,7 +79,7 @@ describe('read', () => {
     expect(res.body.users).toHaveLength(2);
     expect(res.body.statuses).toEqual(['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']);
     expect(res.body.priorities).toEqual(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']);
-    expect(res.body.transitions.CLOSED).toEqual([]);
+    expect(res.body.transitions.CLOSED).toEqual(['OPEN']);
   });
 });
 

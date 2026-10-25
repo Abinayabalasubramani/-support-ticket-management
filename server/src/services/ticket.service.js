@@ -192,6 +192,9 @@ async function bulkUpdate({ ids, status, assigneeId }) {
     const ticket = byId.get(id);
     if (!ticket) {
       results.set(id, failure(id, 'NOT_FOUND', `Ticket ${id} not found`));
+    } else if (status !== undefined && ticket.status === status) {
+      // Not an error as such: the ticket is already where the caller wants it. Nothing is written.
+      results.set(id, failure(id, 'ALREADY_IN_STATUS', `Already ${status.toLowerCase().replace('_', ' ')}, nothing to change`));
     } else if (status !== undefined && !canTransition(ticket.status, status)) {
       const allowed = allowedNext(ticket.status);
       results.set(

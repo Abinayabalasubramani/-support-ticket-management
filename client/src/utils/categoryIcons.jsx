@@ -1,11 +1,10 @@
-import { Code, Lightbulb, MessageSquare, Receipt, ShieldCheck, Tag } from 'lucide-react';
+import { Bug, BookOpen, GitPullRequest, ListChecks, Tag } from 'lucide-react';
 
 const ICONS = {
-  Billing: Receipt,
-  Technical: Code,
-  Account: ShieldCheck,
-  'Feature Request': Lightbulb,
-  General: MessageSquare,
+  'Change Request': GitPullRequest,
+  Bug,
+  Task: ListChecks,
+  Story: BookOpen,
 };
 
 // Falls back to a tag icon for any category added later.

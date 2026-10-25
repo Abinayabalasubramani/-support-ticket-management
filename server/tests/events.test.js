@@ -179,13 +179,13 @@ describe('what gets announced', () => {
 
   test('a bulk request where nothing changes announces nothing', async () => {
     const closed = await newTicket('CLOSED');
-    await api().patch('/api/tickets/bulk').send({ ids: [closed.id], status: 'OPEN' });
+    await api().patch('/api/tickets/bulk').send({ ids: [closed.id], status: 'RESOLVED' });
     expect(received).toHaveLength(0);
   });
 
   test('failed requests announce nothing', async () => {
     const closed = await newTicket('CLOSED');
-    await api().patch(`/api/tickets/${closed.id}/status`).send({ status: 'OPEN' }); // 409
+    await api().patch(`/api/tickets/${closed.id}/status`).send({ status: 'RESOLVED' }); // 409
     await api().post('/api/tickets').send({ description: 'no title' }); // 400
     await api().delete('/api/tickets/999999'); // 404
     await api().put('/api/tickets/999999').send({ title: 'x' }); // 404

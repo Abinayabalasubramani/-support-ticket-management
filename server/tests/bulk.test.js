@@ -44,8 +44,9 @@ describe('bulk status change', () => {
     expect(res.body.summary).toEqual({ requested: 3, succeeded: 1, failed: 2 });
     expect(res.body.results[0]).toEqual({ id: ok.id, ok: true });
     expect(res.body.results[1]).toMatchObject({ id: closed.id, ok: false, code: 'INVALID_STATUS_TRANSITION' });
-    expect(res.body.results[1].message).toMatch(/final/i);
-    expect(res.body.results[2]).toMatchObject({ id: alreadyThere.id, ok: false, code: 'INVALID_STATUS_TRANSITION' });
+    expect(res.body.results[1].message).toMatch(/Allowed: OPEN/);
+    expect(res.body.results[2]).toMatchObject({ id: alreadyThere.id, ok: false, code: 'ALREADY_IN_STATUS' });
+    expect(res.body.results[2].message).toMatch(/already resolved/i);
 
     expect(await statusOf(ok.id)).toBe('RESOLVED');
     expect(await statusOf(closed.id)).toBe('CLOSED'); // untouched
@@ -71,9 +72,27 @@ describe('bulk status change', () => {
 
   test('when nothing can be updated it is still a 200 with all failures listed', async () => {
     const closed = await newTicket('CLOSED');
-    const res = await bulk({ ids: [closed.id], status: 'OPEN' });
+    const res = await bulk({ ids: [closed.id], status: 'RESOLVED' });
     expect(res.status).toBe(200);
     expect(res.body.summary).toEqual({ requested: 1, succeeded: 0, failed: 1 });
+  });
+
+  test('tickets already in the chosen status are skipped quietly: no write, no history', async () => {
+    const inProgress = await newTicket('IN_PROGRESS');
+    const open = await newTicket('OPEN');
+    const res = await bulk({ ids: [inProgress.id, open.id], status: 'IN_PROGRESS' });
+
+    expect(res.body.summary).toEqual({ requested: 2, succeeded: 1, failed: 1 });
+    expect(res.body.results[0]).toMatchObject({ id: inProgress.id, ok: false, code: 'ALREADY_IN_STATUS' });
+    expect(await historyOf(inProgress.id)).toHaveLength(1);
+    expect(await statusOf(open.id)).toBe('IN_PROGRESS');
+  });
+
+  test('closed tickets can be reopened in bulk', async () => {
+    const closed = await newTicket('CLOSED');
+    const res = await bulk({ ids: [closed.id], status: 'OPEN' });
+    expect(res.body.summary).toEqual({ requested: 1, succeeded: 1, failed: 0 });
+    expect((await historyOf(closed.id)).pop()).toMatchObject({ fromStatus: 'CLOSED', toStatus: 'OPEN' });
   });
 
   test('duplicate ids are collapsed', async () => {

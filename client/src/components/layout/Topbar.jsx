@@ -22,6 +22,7 @@ export default function Topbar({ onMenuClick }) {
   const inputRef = useRef(null);
   const [query, setQuery] = useState('');
   const { title, icon: PageIcon } = pageFor(pathname);
+  const onTicketsPage = pathname === '/tickets';
 
   // "/" or Ctrl/Cmd+K jumps to the search box from anywhere.
   useEffect(() => {
@@ -56,22 +57,25 @@ export default function Topbar({ onMenuClick }) {
         <span className="hidden sm:inline">{title}</span>
       </div>
 
-      <form onSubmit={onSubmit} role="search" className="relative mx-auto hidden w-full max-w-xl sm:block">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-        <input
-          ref={inputRef}
-          type="search"
-          value={query}
-          maxLength={100}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search tickets"
-          aria-label="Search tickets"
-          className="input h-11 pl-10 pr-12 [&::-webkit-search-cancel-button]:hidden"
-        />
-        <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-line bg-surface-2 px-2 py-0.5 text-xs text-muted">/</kbd>
-      </form>
+      {/* The Tickets page has its own search box, so the top bar one is hidden there. */}
+      {!onTicketsPage && (
+        <form onSubmit={onSubmit} role="search" className="relative mx-auto hidden w-full max-w-xl sm:block">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <input
+            ref={inputRef}
+            type="search"
+            value={query}
+            maxLength={100}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search tickets"
+            aria-label="Search tickets"
+            className="input h-11 pl-10 pr-12 [&::-webkit-search-cancel-button]:hidden"
+          />
+          <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-line bg-surface-2 px-2 py-0.5 text-xs text-muted">/</kbd>
+        </form>
+      )}
 
-      <div className="ml-auto flex items-center gap-3 sm:ml-0">
+      <div className={`ml-auto flex items-center gap-3 ${onTicketsPage ? '' : 'sm:ml-0'}`}>
         <ThemeToggle />
         <button type="button" onClick={() => dispatch(openCreateForm())} className="btn-primary h-10 px-4">
           <Plus className="h-4 w-4" />
