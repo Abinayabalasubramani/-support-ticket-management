@@ -218,7 +218,7 @@ Same keys as above, but both database URLs must end with `&schema=test` so the t
 | Variable | Required | Example | Purpose |
 |---|---|---|---|
 | `VITE_API_URL` | yes | `https://support-ticket-api-cdns.onrender.com/api` | API base URL, including `/api`, no trailing slash. Read at **build** time |
-| `VITE_SHOW_DEMO_LOGIN` | no | `false` | Hide the demo-accounts box on the login page |
+| `VITE_SHOW_DEMO_LOGIN` | no | `true` | Show a "Demo accounts" box on the login page (hidden by default; the demo logins are listed at the top of this README) |
 
 ---
 

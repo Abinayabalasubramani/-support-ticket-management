@@ -1,7 +1,7 @@
 // Demo sign-ins created by `npm run db:seed` in the server (also listed in the README).
-// They are shown on the login page so a reviewer can try the app; set
-// VITE_SHOW_DEMO_LOGIN=false to hide them in a real deployment.
-export const SHOW_DEMO_LOGIN = import.meta.env.VITE_SHOW_DEMO_LOGIN !== 'false';
+// The login page hides them by default, as a real deployment would; set
+// VITE_SHOW_DEMO_LOGIN=true to show a "Demo accounts" box (handy for local development).
+export const SHOW_DEMO_LOGIN = import.meta.env.VITE_SHOW_DEMO_LOGIN === 'true';
 
 export const DEMO_PASSWORD = 'Demo@12345';
 
