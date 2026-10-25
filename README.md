@@ -54,6 +54,10 @@ A full-stack support desk: agents create, assign and work on tickets, search and
 - Responsive dark and light themes (a single button switches), loading skeletons, empty states, error states with retry, success toasts, form validation with server messages shown next to the right field.
 - Reusable components, Redux Toolkit + RTK Query for state and caching, debounced search, no unnecessary requests, updates appear without reloading.
 
+**Team management (admins)**
+- A Team page lists the people who can sign in and be assigned tickets, and lets an admin add a new team member (name, email, role, password with a generator). New members can sign in immediately and appear in every assignee list, including in other open sessions.
+- Each ticket has one main assignee (the accountable owner) plus any number of **collaborators**, so several people can work on one ticket. Assigning many tickets to one person is done with bulk assign.
+
 **Security**
 - Sign-in with hashed passwords and signed, expiring tokens; roles (admin, agent); every API route protected; brute-force limit on sign-in; security headers; per-IP rate limiting; error responses that never expose internals.
 
@@ -123,6 +127,7 @@ client/
 | `Category` | Ticket categories |
 | `Ticket` | The ticket; links to a category and (optionally) an assignee |
 | `StatusHistory` | One row per status change: `fromStatus`, `toStatus`, `changedAt` (deleted with the ticket) |
+| `TicketCollaborator` | Links a ticket to the extra people working on it (one row per ticket and person; removed with the ticket or the user) |
 | `TicketActivity` | Assignee changes and edits for the timeline (stores names as they were at the time) |
 
 Deleting a category that still has tickets is blocked; deleting a user unassigns their tickets; deleting a ticket deletes its history. Indexes cover every filtered and sorted column.
@@ -258,6 +263,7 @@ Validation errors add `details: [{ location, field, message }]`. The same `reque
 | `PUT /tickets/:id` | Edit title, description, priority, category (not status) | `200`, `400`, `404` |
 | `PATCH /tickets/:id/status` | Body `{ status }` | `200`, `404`, `409` |
 | `PATCH /tickets/:id/assignee` | Body `{ assigneeId }` (`null` unassigns) | `200`, `404` |
+| `PUT /tickets/:id/collaborators` | Body `{ userIds: [...] }`: the complete list of other people on the ticket (max 10; `[]` removes all). The main assignee is never repeated here | `200`, `400`, `404` |
 | `PATCH /tickets/bulk` | Body `{ ids: [...], status }` **or** `{ ids: [...], assigneeId }`, up to 100 | `200` with a result per ticket |
 | `DELETE /tickets/:id` | **Admin only** | `204`, `403`, `404` |
 | `GET /tickets/:id/history` | Status changes, newest first | `200`, `404` |
@@ -277,6 +283,12 @@ All accept optional `from` and `to` (`YYYY-MM-DD` or ISO date, on the creation d
 | `GET /analytics/by-status` | `[{ status, count }]` for all four statuses (zeros included) |
 | `GET /analytics/by-priority` | `[{ priority, count }]` for all four priorities |
 | `GET /analytics/volume` | `[{ date, count }]`, one entry per day, up to 366 days |
+
+### Team (admin only; agents get `403`)
+| Method and path | Purpose | Success / errors |
+|---|---|---|
+| `GET /users` | Team members with role and assigned-ticket count (never password hashes) | `200` |
+| `POST /users` | Add a member. Body: `name`, `email`, `password` (8 to 72 bytes), optional `role` (`AGENT` default, or `ADMIN`) | `201`, `400`, `409 DUPLICATE_EMAIL` |
 
 ### Other
 | Path | Purpose |
@@ -367,7 +379,8 @@ Order for a first deploy: create the database, set the Render environment variab
 ## Known limitations and trade-offs
 
 **Authentication and access**
-- Accounts are seeded demo users sharing one demo password. There is no registration, password reset or user management screen.
+- Admins can add team members, but there is no editing or removing of users, no password change or reset, and no self-registration. The seeded demo users share one demo password.
+- A ticket has one main assignee plus collaborators. Collaborators cannot be set from the bulk actions or used as a list filter yet, and they receive no notifications.
 - The login token is kept in `localStorage` (so it survives reloads and is shared between tabs). That is exposed to any script injected into the page, which is why tokens are short-lived (8 hours) and the app sets security headers. Cookies were avoided because the frontend and API are on different domains and browsers block third-party cookies.
 - Tokens are not revoked server-side: signing out discards the token in the browser, and a changed role or a removed user takes effect at the next sign-in or expiry.
 - All signed-in agents can see all tickets (there is no per-team or per-customer access). The timeline does not yet record **who** made each change.
