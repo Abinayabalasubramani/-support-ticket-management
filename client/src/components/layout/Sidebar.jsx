@@ -1,18 +1,21 @@
 import { useSelector } from 'react-redux';
 import { NavLink } from 'react-router-dom';
-import { LayoutGrid, LogOut, Ticket } from 'lucide-react';
-import { selectUser } from '../../features/auth/authSlice';
+import { LayoutGrid, LogOut, Ticket, Users } from 'lucide-react';
+import { selectIsAdmin, selectUser } from '../../features/auth/authSlice';
 import useSignOut from '../../features/auth/useSignOut';
 import Avatar from '../common/Avatar';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid, end: true },
   { to: '/tickets', label: 'Tickets', icon: Ticket, end: false },
+  { to: '/team', label: 'Team', icon: Users, end: false, adminOnly: true },
 ];
 
 export default function Sidebar({ open, onClose }) {
   const user = useSelector(selectUser);
+  const isAdmin = useSelector(selectIsAdmin);
   const signOut = useSignOut();
+  const visibleLinks = links.filter((link) => !link.adminOnly || isAdmin);
 
   return (
     <>
@@ -45,7 +48,7 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         <nav className="relative flex-1 space-y-1 px-3 py-4" aria-label="Main">
-          {links.map(({ to, label, icon: Icon, end }) => (
+          {visibleLinks.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}

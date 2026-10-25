@@ -2,6 +2,7 @@ const { Router } = require('express');
 const authRoutes = require('./auth.routes');
 const ticketRoutes = require('./tickets.routes');
 const analyticsRoutes = require('./analytics.routes');
+const usersRoutes = require('./users.routes');
 const eventsRoutes = require('./events.routes');
 const authenticate = require('../middleware/authenticate');
 const { getMeta } = require('../controllers/meta.controller');
@@ -17,6 +18,7 @@ router.use('/events', eventsRoutes);
 router.use(authenticate);
 router.use('/tickets', ticketRoutes);
 router.use('/analytics', analyticsRoutes);
+router.use('/users', usersRoutes);
 router.get('/meta', getMeta);
 
 module.exports = router;

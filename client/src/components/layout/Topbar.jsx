@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { matchPath, useLocation, useNavigate } from 'react-router-dom';
-import { House, Menu, Plus, Search, Ticket } from 'lucide-react';
+import { House, Menu, Plus, Search, Ticket, Users } from 'lucide-react';
 import { setSearch } from '../../features/filters/filtersSlice';
 import { openCreateForm } from '../../features/ui/uiSlice';
 import ThemeToggle from './ThemeToggle';
@@ -10,6 +10,7 @@ import UserMenu from './UserMenu';
 function pageFor(pathname) {
   if (pathname === '/') return { title: 'Dashboard', icon: House };
   if (pathname === '/tickets') return { title: 'Tickets', icon: Ticket };
+  if (pathname === '/team') return { title: 'Team', icon: Users };
   if (matchPath('/tickets/:id', pathname)) return { title: 'Ticket details', icon: Ticket };
   return { title: 'TicketFlow', icon: House };
 }

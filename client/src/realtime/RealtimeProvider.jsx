@@ -88,6 +88,11 @@ export function RealtimeProvider({ children }) {
         source.addEventListener('ticket', (message) => {
           const event = JSON.parse(message.data);
           if (event.origin === CLIENT_ID) return; // our own change: the mutation already refreshed the data
+          if (event.type === 'user.created') {
+            // A new team member: refresh the assignee lists and the team page, quietly.
+            dispatch(apiSlice.util.invalidateTags(['Meta', 'User']));
+            return;
+          }
           pendingEvents.push(event);
           if (!batchTimer) batchTimer = setTimeout(flush, BATCH_MS);
         });

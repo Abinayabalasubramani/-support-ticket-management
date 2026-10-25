@@ -43,7 +43,7 @@ const baseQueryWithAuth = async (args, api, extraOptions) => {
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithAuth,
-  tagTypes: ['Ticket', 'History', 'Analytics'],
+  tagTypes: ['Ticket', 'History', 'Analytics', 'Meta', 'User'],
   endpoints: (builder) => ({
     login: builder.mutation({
       query: (credentials) => ({ url: '/auth/login', method: 'POST', body: credentials }),
@@ -58,6 +58,18 @@ export const apiSlice = createApi({
     getMeta: builder.query({
       query: () => '/meta',
       keepUnusedDataFor: 3600,
+      providesTags: ['Meta'], // refetched when a team member is added
+    }),
+
+    // Team management (admins only on the server).
+    getUsers: builder.query({
+      query: () => '/users',
+      providesTags: ['User'],
+    }),
+
+    createUser: builder.mutation({
+      query: (body) => ({ url: '/users', method: 'POST', body }),
+      invalidatesTags: ['User', 'Meta'],
     }),
 
     getTickets: builder.query({
@@ -163,6 +175,8 @@ export const apiSlice = createApi({
 
 export const {
   useLoginMutation,
+  useGetUsersQuery,
+  useCreateUserMutation,
   useGetMetaQuery,
   useGetTicketsQuery,
   useGetTicketQuery,
