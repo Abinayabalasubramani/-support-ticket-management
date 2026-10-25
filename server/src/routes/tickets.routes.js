@@ -14,6 +14,7 @@ router.get('/:id', validate({ params: v.idParams }), controller.getOne);
 router.put('/:id', validate({ params: v.idParams, body: v.updateTicketBody }), controller.update);
 router.patch('/:id/status', validate({ params: v.idParams, body: v.statusBody }), controller.changeStatus);
 router.patch('/:id/assignee', validate({ params: v.idParams, body: v.assigneeBody }), controller.assign);
+router.put('/:id/collaborators', validate({ params: v.idParams, body: v.collaboratorsBody }), controller.collaborators);
 router.delete('/:id', requireRole('ADMIN'), validate({ params: v.idParams }), controller.remove);
 router.get('/:id/history', validate({ params: v.idParams }), controller.history);
 router.get('/:id/activity', validate({ params: v.idParams }), controller.activity);

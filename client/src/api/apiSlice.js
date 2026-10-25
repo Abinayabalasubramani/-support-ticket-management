@@ -130,6 +130,16 @@ export const apiSlice = createApi({
       ],
     }),
 
+    // The complete list of collaborators for a ticket (the API replaces the whole list).
+    setCollaborators: builder.mutation({
+      query: ({ id, userIds }) => ({ url: `/tickets/${id}/collaborators`, method: 'PUT', body: { userIds } }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Ticket', id },
+        { type: 'Ticket', id: 'LIST' },
+        { type: 'History', id }, // a change adds a timeline entry
+      ],
+    }),
+
     // body: { ids: [...], status } or { ids: [...], assigneeId }. Returns a result per ticket.
     bulkUpdate: builder.mutation({
       query: (body) => ({ url: '/tickets/bulk', method: 'PATCH', body }),
@@ -186,6 +196,7 @@ export const {
   useUpdateTicketMutation,
   useChangeStatusMutation,
   useAssignTicketMutation,
+  useSetCollaboratorsMutation,
   useBulkUpdateMutation,
   useDeleteTicketMutation,
   useGetSummaryQuery,

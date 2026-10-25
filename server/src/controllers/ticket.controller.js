@@ -37,6 +37,12 @@ const assign = asyncHandler(async (req, res) => {
   res.json(ticket);
 });
 
+const collaborators = asyncHandler(async (req, res) => {
+  const ticket = await service.setCollaborators(req.params.id, req.body.userIds);
+  announce(req, 'ticket.updated', [ticket.id]);
+  res.json(ticket);
+});
+
 const bulk = asyncHandler(async (req, res) => {
   const result = await service.bulkUpdate(req.body);
   const changed = result.results.filter((r) => r.ok).map((r) => r.id);
@@ -58,4 +64,4 @@ const activity = asyncHandler(async (req, res) => {
   res.json(await service.getActivity(req.params.id));
 });
 
-module.exports = { list, create, getOne, update, changeStatus, assign, bulk, remove, history, activity };
+module.exports = { list, create, getOne, update, changeStatus, assign, collaborators, bulk, remove, history, activity };

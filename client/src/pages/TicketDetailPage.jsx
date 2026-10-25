@@ -9,6 +9,7 @@ import {
   useGetMetaQuery,
   useGetTicketActivityQuery,
   useGetTicketQuery,
+  useSetCollaboratorsMutation,
 } from '../api/apiSlice';
 import { selectIsAdmin } from '../features/auth/authSlice';
 import { openEditForm } from '../features/ui/uiSlice';
@@ -25,6 +26,7 @@ import Spinner from '../components/common/Spinner';
 import StatusBadge from '../components/common/StatusBadge';
 import { useToast } from '../components/common/Toast';
 import AssigneeSelect from '../components/tickets/AssigneeSelect';
+import Collaborators from '../components/tickets/Collaborators';
 import StatusControl from '../components/tickets/StatusControl';
 import Timeline from '../components/tickets/Timeline';
 
@@ -52,6 +54,7 @@ export default function TicketDetailPage() {
 
   const [changeStatus, { isLoading: isChangingStatus }] = useChangeStatusMutation();
   const [assignTicket, { isLoading: isAssigning }] = useAssignTicketMutation();
+  const [setCollaborators, { isLoading: isSettingCollaborators }] = useSetCollaboratorsMutation();
   const [deleteTicket, { isLoading: isDeleting }] = useDeleteTicketMutation();
 
   const [pendingStatus, setPendingStatus] = useState(null);
@@ -105,6 +108,15 @@ export default function TicketDetailPage() {
     try {
       const updated = await assignTicket({ id: ticket.id, assigneeId }).unwrap();
       toast.success(updated.assignee ? `Assigned to ${updated.assignee.name}` : 'Ticket unassigned');
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  };
+
+  const onCollaborators = async (userIds) => {
+    try {
+      await setCollaborators({ id: ticket.id, userIds }).unwrap();
+      toast.success('Collaborators updated');
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
@@ -168,7 +180,13 @@ export default function TicketDetailPage() {
             <label htmlFor="assignee" className="mb-3 block text-sm font-semibold text-fg">
               Assignee
             </label>
-            {meta ? <AssigneeSelect id="assignee" value={ticket.assigneeId} users={meta.users} disabled={isAssigning} onChange={onAssign} /> : <Skeleton className="h-10 w-full" />}
+            {meta ? <AssigneeSelect id="assignee" value={ticket.assigneeId} current={ticket.assignee} users={meta.users} disabled={isAssigning} onChange={onAssign} /> : <Skeleton className="h-10 w-full" />}
+          </section>
+
+          <section className="card p-5">
+            <h2 className="mb-1 text-sm font-semibold text-fg">Collaborators</h2>
+            <p className="mb-3 text-xs text-muted">Other people working on this ticket, besides the assignee.</p>
+            {meta ? <Collaborators ticket={ticket} users={meta.users} onChange={onCollaborators} disabled={isSettingCollaborators} /> : <Skeleton className="h-10 w-full" />}
           </section>
 
           <section className="card p-5">

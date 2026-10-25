@@ -5,9 +5,18 @@ const { canTransition, allowedNext } = require('../utils/statusTransitions');
 const ticketInclude = {
   category: true,
   assignee: { select: { id: true, name: true, email: true } },
+  collaborators: {
+    orderBy: { createdAt: 'asc' },
+    select: { user: { select: { id: true, name: true, email: true } } },
+  },
 };
 
-const withTransitions = (ticket) => ({ ...ticket, allowedTransitions: allowedNext(ticket.status) });
+// The shape the API returns: collaborators as a plain list of people, and the moves the status allows.
+const withTransitions = (ticket) => ({
+  ...ticket,
+  collaborators: (ticket.collaborators ?? []).map((c) => c.user),
+  allowedTransitions: allowedNext(ticket.status),
+});
 
 const getTicketOrThrow = async (id, db = prisma) => {
   const ticket = await db.ticket.findUnique({ where: { id }, include: ticketInclude });
@@ -117,13 +126,52 @@ async function assignTicket(id, assigneeId) {
   // Assigning the person who already has it changes nothing, so nothing is logged.
   if ((current.assigneeId ?? null) === assigneeId) return withTransitions(current);
 
-  const [ticket] = await prisma.$transaction([
-    prisma.ticket.update({ where: { id }, data: { assigneeId }, include: ticketInclude }),
+  const operations = [
+    prisma.ticket.update({ where: { id }, data: { assigneeId } }),
     prisma.ticketActivity.create({
       data: { ticketId: id, type: 'ASSIGNEE_CHANGED', details: { from: person(current.assignee), to: person(user) } },
     }),
+  ];
+  // The new owner stops being a "collaborator": nobody is listed twice on a ticket.
+  if (assigneeId !== null) operations.push(prisma.ticketCollaborator.deleteMany({ where: { ticketId: id, userId: assigneeId } }));
+
+  await prisma.$transaction(operations);
+  return withTransitions(await getTicketOrThrow(id));
+}
+
+// Sets the full list of collaborators: the other team members working on this ticket besides
+// its main assignee. Only real changes are saved and logged (added/removed names).
+async function setCollaborators(id, userIds) {
+  const current = await getTicketOrThrow(id);
+
+  // The main assignee is already on the ticket, so is never repeated as a collaborator.
+  const wanted = [...new Set(userIds)].filter((userId) => userId !== current.assigneeId);
+  const users = wanted.length ? await prisma.user.findMany({ where: { id: { in: wanted } }, select: { id: true, name: true } }) : [];
+  if (users.length !== wanted.length) {
+    const found = new Set(users.map((u) => u.id));
+    throw AppError.notFound(`User ${wanted.find((userId) => !found.has(userId))} not found`);
+  }
+
+  const before = current.collaborators.map((c) => c.user);
+  const beforeIds = new Set(before.map((u) => u.id));
+  const wantedIds = new Set(wanted);
+  const added = users.filter((u) => !beforeIds.has(u.id));
+  const removed = before.filter((u) => !wantedIds.has(u.id));
+
+  if (added.length === 0 && removed.length === 0) return withTransitions(current);
+
+  await prisma.$transaction([
+    prisma.ticketCollaborator.deleteMany({ where: { ticketId: id, userId: { in: removed.map((u) => u.id) } } }),
+    prisma.ticketCollaborator.createMany({ data: added.map((u) => ({ ticketId: id, userId: u.id })) }),
+    prisma.ticketActivity.create({
+      data: {
+        ticketId: id,
+        type: 'TICKET_EDITED',
+        details: { changes: [{ field: 'collaborators', added: added.map(person), removed: removed.map(person) }] },
+      },
+    }),
   ]);
-  return withTransitions(ticket);
+  return withTransitions(await getTicketOrThrow(id));
 }
 
 const failure = (id, code, message) => ({ id, ok: false, code, message });
@@ -181,6 +229,10 @@ async function bulkUpdate({ ids, status, assigneeId }) {
         const changed = eligible.filter((t) => (t.assigneeId ?? null) !== assigneeId);
         if (changed.length > 0) {
           await tx.ticket.updateMany({ where: { id: { in: changed.map((t) => t.id) } }, data: { assigneeId } });
+          // A new owner is not also a collaborator on the same ticket.
+          if (assigneeId !== null) {
+            await tx.ticketCollaborator.deleteMany({ where: { userId: assigneeId, ticketId: { in: changed.map((t) => t.id) } } });
+          }
 
           const personIds = new Set(changed.map((t) => t.assigneeId).filter(Boolean));
           if (assigneeId !== null) personIds.add(assigneeId);
@@ -303,6 +355,7 @@ module.exports = {
   updateTicket,
   changeStatus,
   assignTicket,
+  setCollaborators,
   bulkUpdate,
   deleteTicket,
   getHistory,

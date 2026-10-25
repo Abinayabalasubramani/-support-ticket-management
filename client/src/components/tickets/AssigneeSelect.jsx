@@ -1,7 +1,12 @@
 import { ChevronDown } from 'lucide-react';
 import { inputClass } from '../common/FormField';
 
-export default function AssigneeSelect({ id, value, users, disabled, onChange }) {
+// `current` is the ticket's assignee as the server sent it. It is always shown, even when the
+// people list in the cache is older than the assignment (for example a team member who was
+// added a moment ago), so the box never claims "Unassigned" for an assigned ticket.
+export default function AssigneeSelect({ id, value, current, users, disabled, onChange }) {
+  const options = current && !users.some((u) => u.id === current.id) ? [...users, current] : users;
+
   return (
     <div className="relative">
       <select
@@ -12,7 +17,7 @@ export default function AssigneeSelect({ id, value, users, disabled, onChange })
         className={`${inputClass(false)} appearance-none pr-10 disabled:opacity-60`}
       >
         <option value="" className="bg-surface-solid text-fg">Unassigned</option>
-        {users.map((u) => (
+        {options.map((u) => (
           <option key={u.id} value={u.id} className="bg-surface-solid text-fg">
             {u.name}
           </option>

@@ -34,13 +34,14 @@ enum Role {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  name         String
-  email        String   @unique
+  id             Int                  @id @default(autoincrement())
+  name           String
+  email          String               @unique
   // bcrypt hash, never the password itself. Optional so a user without a password simply cannot log in.
-  passwordHash String?
-  role         Role     @default(AGENT)
-  tickets      Ticket[]
+  passwordHash   String?
+  role           Role                 @default(AGENT)
+  tickets        Ticket[]
+  collaborations TicketCollaborator[]
 }
 
 model Category {
@@ -61,17 +62,33 @@ model Ticket {
   updatedAt   DateTime @updatedAt
 
   // Deleting a category that still has tickets is blocked.
-  category Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  category      Category             @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   // Deleting a user unassigns their tickets.
-  assignee User?            @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
-  history  StatusHistory[]
-  activity TicketActivity[]
+  assignee      User?                @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  history       StatusHistory[]
+  activity      TicketActivity[]
+  // Other team members working on the ticket besides the main assignee.
+  collaborators TicketCollaborator[]
 
   @@index([status])
   @@index([priority])
   @@index([categoryId])
   @@index([assigneeId])
   @@index([createdAt])
+}
+
+// A ticket has one main assignee (Ticket.assigneeId) and any number of collaborators.
+// The pair (ticket, user) is the key, so nobody can be added twice.
+model TicketCollaborator {
+  ticketId  Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([ticketId, userId])
+  @@index([userId])
 }
 
 model TicketActivity {

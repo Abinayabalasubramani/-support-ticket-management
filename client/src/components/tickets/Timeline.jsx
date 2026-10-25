@@ -18,6 +18,16 @@ function describeChange(change) {
       return <>Category changed from <strong className="text-fg">{change.from}</strong> to <strong className="text-fg">{change.to}</strong></>;
     case 'description':
       return <>Description was edited</>;
+    case 'collaborators': {
+      const list = (people) => people.map((p) => p.name).join(', ');
+      return (
+        <>
+          {change.added?.length > 0 && <>Added {<strong className="text-fg">{list(change.added)}</strong>} as {change.added.length === 1 ? 'a collaborator' : 'collaborators'}</>}
+          {change.added?.length > 0 && change.removed?.length > 0 && '. '}
+          {change.removed?.length > 0 && <>Removed {<strong className="text-fg">{list(change.removed)}</strong>} from collaborators</>}
+        </>
+      );
+    }
     default:
       return <>{change.field} was edited</>;
   }

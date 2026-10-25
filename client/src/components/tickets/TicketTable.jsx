@@ -90,14 +90,24 @@ export default function TicketTable({ tickets, selectedIds, onToggle, onTogglePa
                 <StatusBadge status={t.status} />
               </td>
               <td className="whitespace-nowrap px-4 py-4">
-                {t.assignee ? (
-                  <span className="inline-flex items-center gap-2.5 text-sm text-fg">
-                    <Avatar name={t.assignee.name} />
-                    {t.assignee.name}
-                  </span>
-                ) : (
-                  <span className="text-sm text-faint">Unassigned</span>
-                )}
+                <span className="inline-flex items-center gap-2.5 text-sm text-fg">
+                  {t.assignee ? (
+                    <>
+                      <Avatar name={t.assignee.name} />
+                      {t.assignee.name}
+                    </>
+                  ) : (
+                    <span className="text-faint">Unassigned</span>
+                  )}
+                  {t.collaborators?.length > 0 && (
+                    <span
+                      className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary"
+                      title={`Also working on it: ${t.collaborators.map((c) => c.name).join(', ')}`}
+                    >
+                      +{t.collaborators.length}
+                    </span>
+                  )}
+                </span>
               </td>
               <td className="whitespace-nowrap px-4 py-4">
                 <p className="text-sm text-fg">{formatDate(t.createdAt)}</p>

@@ -33,6 +33,15 @@ const statusBody = z.strictObject({ status: z.enum(STATUSES) });
 
 const assigneeBody = z.strictObject({ assigneeId: id.nullable() });
 
+// The complete list of collaborators (an empty list removes them all). Duplicates collapse.
+const MAX_COLLABORATORS = 10;
+const collaboratorsBody = z.strictObject({
+  userIds: z
+    .array(id)
+    .max(MAX_COLLABORATORS, `At most ${MAX_COLLABORATORS} collaborators per ticket`)
+    .transform((ids) => [...new Set(ids)]),
+});
+
 const MAX_BULK = 100;
 
 // One action per request: change the status OR the assignee of every listed ticket.
@@ -52,4 +61,4 @@ const bulkBody = z
     path: ['status'],
   });
 
-module.exports = { idParams, createTicketBody, updateTicketBody, statusBody, assigneeBody, bulkBody, MAX_BULK };
+module.exports = { idParams, createTicketBody, updateTicketBody, statusBody, assigneeBody, collaboratorsBody, bulkBody, MAX_BULK };

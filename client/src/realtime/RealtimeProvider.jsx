@@ -81,7 +81,8 @@ export function RealtimeProvider({ children }) {
           if (wasDown) {
             // Events may have been missed while disconnected: refresh everything.
             wasDown = false;
-            dispatch(apiSlice.util.invalidateTags(['Ticket', 'History', 'Analytics']));
+            // (also the people list: a team member may have been added while we were away)
+            dispatch(apiSlice.util.invalidateTags(['Ticket', 'History', 'Analytics', 'Meta', 'User']));
           }
         });
 
