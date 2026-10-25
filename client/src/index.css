@@ -90,6 +90,16 @@ body {
   box-shadow: inset 0 1px 0 var(--highlight), var(--shadow);
 }
 
+/* Frosted panel for dropdowns and menus that open over other content: mostly solid so the text
+   underneath cannot be read through it, with a strong blur on top. */
+@utility popover {
+  @apply rounded-xl border border-line;
+  background: color-mix(in srgb, var(--surface-solid) 88%, transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  box-shadow: inset 0 1px 0 var(--highlight), 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
 @utility btn {
   @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50;
 }

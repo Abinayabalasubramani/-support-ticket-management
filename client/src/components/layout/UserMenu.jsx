@@ -49,7 +49,7 @@ export default function UserMenu() {
       </button>
 
       {open && (
-        <div role="menu" className="card absolute right-0 z-30 mt-2 w-60 overflow-hidden">
+        <div role="menu" className="popover absolute right-0 z-30 mt-2 w-60 overflow-hidden">
           <div className="border-b border-line px-4 py-3">
             <p className="truncate text-sm font-medium text-fg">{user.name}</p>
             <p className="truncate text-xs text-muted">{user.email}</p>

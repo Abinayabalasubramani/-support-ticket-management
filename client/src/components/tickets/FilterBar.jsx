@@ -30,7 +30,9 @@ export default function FilterBar() {
   );
 
   return (
-    <div className="card flex flex-wrap items-center gap-3 p-4">
+    // relative z-10: this card's dropdown lists open downward over the table below, so the card
+    // must stack above it (below the sticky top bar, which is z-20).
+    <div className="card relative z-10 flex flex-wrap items-center gap-3 p-4">
       <SearchInput value={filters.search} onCommit={onSearch} />
       <FilterDropdown label="Status" options={options.status} selected={filters.status} onChange={set('status')} />
       <FilterDropdown label="Priority" options={options.priority} selected={filters.priority} onChange={set('priority')} />
